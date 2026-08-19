@@ -4,14 +4,46 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    # Expo SDK packages must move together as a set -- bumping one in isolation
-    # breaks the build. Those are upgraded via `npx expo install --fix` instead.
+    open-pull-requests-limit: 5
+
+    # Anything the Expo SDK pins must be upgraded as a set, with
+    # `npx expo install --fix`, and never one package at a time by Dependabot.
+    #
+    # Two different failure modes make this necessary:
+    #   1. Loud -- react-dom and react-test-renderer must match the exact `react`
+    #      version Expo pins. Bumping either alone fails to install at all.
+    #   2. Quiet, and worse -- the react-native-* packages have native code whose
+    #      version must match the SDK. A bump can pass CI (which only runs JS)
+    #      and still break the native build or crash at runtime on device.
     ignore:
       - dependency-name: 'expo'
       - dependency-name: 'expo-*'
-      - dependency-name: 'react-native'
       - dependency-name: '@expo/*'
-    open-pull-requests-limit: 5
+      - dependency-name: 'react'
+      - dependency-name: 'react-dom'
+      - dependency-name: 'react-test-renderer'
+      - dependency-name: 'react-native'
+      - dependency-name: 'react-native-*'
+      - dependency-name: 'jest-expo'
+
+      # jest-expo 57 is built against Jest 29 internals, so a major Jest bump
+      # breaks the preset. Minor and patch updates are still welcome.
+      - dependency-name: 'jest'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/jest'
+        update-types: ['version-update:semver-major']
+
+      # eslint-config-expo constrains the usable ESLint major.
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+
+    # Everything left is independent of the SDK, so a single grouped PR per week
+    # is less noise than one PR per package.
+    groups:
+      dev-dependencies:
+        dependency-type: development
+      production-dependencies:
+        dependency-type: production
 
   - package-ecosystem: github-actions
     directory: /
