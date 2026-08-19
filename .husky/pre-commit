@@ -1,0 +1,4 @@
+# Runs eslint --fix and prettier --write on staged files only.
+# Fast by design: the full lint/typecheck/test sweep is CI's job, and a slow
+# pre-commit hook is a hook people start bypassing with --no-verify.
+npx lint-staged

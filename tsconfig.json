@@ -1,6 +1,18 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "strict": true,
+    // Catches `arr[0]` returning undefined and object lookups that may miss.
+    // Noisy at first, but it is precisely the class of bug that health data
+    // (missing days, unsynced metrics) produces at runtime.
+    "noUncheckedIndexedAccess": true,
+    // TypeScript 6 no longer picks these up automatically under `moduleResolution:
+    // bundler`, so the test globals (describe/it/expect) must be named here.
+    "types": ["jest", "node"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules", "dist", "coverage"]
 }

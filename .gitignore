@@ -31,7 +31,11 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+# NOTE: `.env` is ignored deliberately -- secrets never get committed.
+# `.env.example` IS committed, as documentation of which keys are needed.
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +43,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# test coverage
+/coverage

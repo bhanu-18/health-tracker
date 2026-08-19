@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "health-tracker",
+    "name": "Health Tracker",
     "slug": "health-tracker",
+    "scheme": "healthtracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bhanuteja.healthtracker"
     },
     "android": {
+      "package": "com.bhanuteja.healthtracker",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +24,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": ["expo-router", "expo-sqlite", "expo-font"]
   }
 }
