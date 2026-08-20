@@ -7,8 +7,10 @@ import {
   queryStatisticsForQuantity,
   queryWorkoutSamples,
   requestAuthorization,
+  WorkoutActivityType,
 } from '@kingstinct/react-native-healthkit';
 import { totalCoveredHours, type Interval } from '../../lib/intervals';
+import { activityName } from '../../lib/workoutActivity';
 import type {
   DailyHealthMetrics,
   HealthProvider,
@@ -320,14 +322,14 @@ export class HealthKitProvider implements HealthProvider {
 
       return workouts.map((workout, index) => ({
         id: workout.uuid ?? `workout-${index}`,
-        activityType: humanizeActivity(String(workout.workoutActivityType)),
+        activityType: activityName(WorkoutActivityType[workout.workoutActivityType]),
         startedAt: workout.startDate,
         durationMinutes: Math.round((workout.duration?.quantity ?? 0) / 60),
         energyKcal:
           workout.totalEnergyBurned?.quantity != null
             ? Math.round(workout.totalEnergyBurned.quantity)
             : null,
-        sourceName: 'Apple Health',
+        sourceName: sourceNameOf(workout),
       }));
     } catch (cause) {
       warnReadFailed('workouts', cause);
@@ -349,7 +351,19 @@ function warnReadFailed(metric: string, cause: unknown): void {
 }
 
 /** `traditionalStrengthTraining` -> `Traditional Strength Training`. */
-function humanizeActivity(raw: string): string {
-  const spaced = raw.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+/**
+ * Which app or device recorded the session.
+ *
+ * Read defensively and per-workout: `source` is a native proxy object, and a
+ * throw reaching the caller would lose the whole day's list over one unreadable
+ * row. An unnamed source is worth far less than a named one but still more than
+ * no row at all.
+ */
+function sourceNameOf(workout: { sourceRevision?: { source?: { name?: string } } }): string {
+  try {
+    const name = workout.sourceRevision?.source?.name;
+    return name != null && name.trim() !== '' ? name : 'Unknown source';
+  } catch {
+    return 'Unknown source';
+  }
 }
