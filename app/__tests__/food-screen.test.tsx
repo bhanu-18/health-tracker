@@ -118,7 +118,8 @@ describe('FoodScreen', () => {
     await waitFor(() => expect(getByText('Your usual meals')).toBeTruthy());
 
     // The usual is 2 servings of a 58 kcal idli, so it must show 116, not 58.
-    expect(getByText('116 kcal')).toBeTruthy();
+    // The figure and its unit are separate nodes so the number can be styled.
+    expect(getByText('116')).toBeTruthy();
 
     fireEvent.press(getAllByText('Idli')[0]!);
 
@@ -219,14 +220,13 @@ describe('FoodScreen', () => {
     const { getByText, getAllByText } = await render(<FoodScreen />);
     await waitFor(() => expect(getByText('Chana masala')).toBeTruthy());
 
-    // One "310 kcal" exists in the list row before the sheet opens.
-    expect(getAllByText('310 kcal')).toHaveLength(1);
+    // The list row shows the bare figure; the sheet shows it with its unit.
+    expect(getAllByText('310')).toHaveLength(1);
 
     fireEvent.press(getByText('Chana masala'));
 
-    // The sheet shows the serving label and a default one-serving total, so the
-    // figure now appears twice -- in the row behind, and in the sheet.
+    // The sheet shows the serving label and a one-serving total.
     await waitFor(() => expect(getByText('1 cup (200 g)')).toBeTruthy());
-    expect(getAllByText('310 kcal')).toHaveLength(2);
+    expect(getByText('310 kcal')).toBeTruthy();
   });
 });

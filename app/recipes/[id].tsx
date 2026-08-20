@@ -2,11 +2,13 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AddIngredientSheet, type NewIngredient } from '../../src/components/AddIngredientSheet';
+import { AnimatedNumber } from '../../src/components/AnimatedNumber';
 import { Button } from '../../src/components/Button';
+import { GradientSurface } from '../../src/components/GradientSurface';
 import { Screen } from '../../src/components/Screen';
 import { SwipeToDelete } from '../../src/components/SwipeToDelete';
 import { Toast } from '../../src/components/Toast';
-import { Body, Caption, Display, Heading, Title } from '../../src/components/Typography';
+import { Body, Caption, Heading, Title } from '../../src/components/Typography';
 import {
   addIngredient,
   getRecipe,
@@ -42,6 +44,7 @@ export default function RecipeDetailScreen() {
   const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const theme = useTheme();
   const logMeal = useFoodLog((s) => s.logMeal);
 
   const [recipe, setRecipe] = useState<RecipeWithIngredients | null>(null);
@@ -126,17 +129,26 @@ export default function RecipeDetailScreen() {
         {`Serves ${recipe.serves}`}
       </Caption>
 
-      <View style={styles.hero}>
-        <Display style={styles.heroNumber} color={metricColors.food}>
-          {Math.round(recipe.caloriesPerServing)}
-        </Display>
+      <GradientSurface
+        gradient={theme.metricGradients.food}
+        id="recipe-hero"
+        style={styles.hero}
+        borderRadius={radius.lg}
+        opacity={theme.isDark ? [0.26, 0.06] : [0.18, 0.04]}
+      >
+        {/* Counts up, matching the dashboard hero. This figure is the recipe's
+            entire claim, so it earns the emphasis. */}
+        <AnimatedNumber
+          value={Math.round(recipe.caloriesPerServing)}
+          style={[styles.heroNumber, { color: metricColors.food }]}
+        />
         <Title style={styles.heroLabel} color={colors.textMuted}>
           kcal per serving
         </Title>
         <Caption style={styles.heroMacros} color={colors.textFaint}>
           {`P ${recipe.proteinPerServingG}g · C ${recipe.carbsPerServingG}g · F ${recipe.fatPerServingG}g`}
         </Caption>
-      </View>
+      </GradientSurface>
 
       <Title style={styles.sectionTitle}>Ingredients</Title>
 
@@ -200,10 +212,15 @@ const makeStyles = (t: Theme) =>
       marginTop: spacing.xl,
       marginBottom: spacing.xl,
       padding: spacing.xl,
-      borderRadius: radius.md,
-      backgroundColor: t.metricTints.food,
+      backgroundColor: t.colors.surface,
+      ...t.shadows.card,
     },
-    heroNumber: { fontSize: 52, lineHeight: 56 },
+    heroNumber: {
+      fontFamily: t.fonts.display,
+      fontSize: 52,
+      lineHeight: 56,
+      letterSpacing: -1.5,
+    },
     heroLabel: { fontWeight: '500', marginTop: spacing.xs },
     heroMacros: {
       textTransform: 'none',
@@ -218,11 +235,10 @@ const makeStyles = (t: Theme) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: t.colors.surface,
-      borderWidth: 1,
-      borderColor: t.colors.border,
       borderRadius: radius.md,
       padding: spacing.lg,
       marginBottom: spacing.sm,
+      ...t.shadows.card,
     },
     ingredientInfo: { gap: 2, flex: 1 },
     amount: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },

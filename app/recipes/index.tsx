@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Button } from '../../src/components/Button';
+import { GradientBadge } from '../../src/components/GradientBadge';
 import { Screen } from '../../src/components/Screen';
 import { Body, Caption, Heading } from '../../src/components/Typography';
 import { getRecipes } from '../../src/db/repositories/recipes';
@@ -21,6 +22,7 @@ export default function RecipesScreen() {
   const { colors, metricColors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const router = useRouter();
+  const theme = useTheme();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
 
   // Reload on focus rather than on mount: returning from adding a recipe or
@@ -56,13 +58,26 @@ export default function RecipesScreen() {
             onPress={() => router.push(`/recipes/${recipe.id}`)}
             style={styles.row}
           >
+            <GradientBadge
+              icon="restaurant"
+              gradient={theme.metricGradients.food}
+              id={`recipe-${recipe.id}`}
+              size={26}
+            />
             <View style={styles.rowInfo}>
               <Body>{recipe.name}</Body>
               <Caption style={styles.meta} color={colors.textFaint}>
                 {`serves ${recipe.serves}`}
               </Caption>
             </View>
-            <Body color={metricColors.food}>{`${Math.round(recipe.caloriesPerServing)} kcal`}</Body>
+            <View style={styles.calorieGroup}>
+              <Body style={styles.calories} color={metricColors.food}>
+                {Math.round(recipe.caloriesPerServing)}
+              </Body>
+              <Caption style={styles.calorieUnit} color={colors.textFaint}>
+                kcal
+              </Caption>
+            </View>
           </Pressable>
         ))
       )}
@@ -81,14 +96,16 @@ const makeStyles = (t: Theme) =>
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      gap: spacing.md,
       backgroundColor: t.colors.surface,
-      borderWidth: 1,
-      borderColor: t.colors.border,
       borderRadius: radius.md,
       padding: spacing.lg,
       marginBottom: spacing.sm,
+      ...t.shadows.card,
     },
+    calorieGroup: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
+    calories: { fontWeight: '700', fontSize: 17 },
+    calorieUnit: { textTransform: 'none', letterSpacing: 0, fontWeight: '500' },
     rowInfo: { gap: 2, flex: 1 },
     meta: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
     action: { marginTop: spacing.xl },

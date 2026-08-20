@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Button } from '../../src/components/Button';
+import { GradientBadge } from '../../src/components/GradientBadge';
+import { GradientSurface } from '../../src/components/GradientSurface';
 import { LogMealSheet, type LogMealTarget } from '../../src/components/LogMealSheet';
 import { Screen } from '../../src/components/Screen';
 import { SearchField } from '../../src/components/SearchField';
@@ -76,6 +78,7 @@ export default function FoodScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [target, setTarget] = useState<LogMealTarget | null>(null);
 
+  const theme = useTheme();
   const logMeal = useFoodLog((s) => s.logMeal);
   const date = today();
 
@@ -292,20 +295,35 @@ export default function FoodScreen() {
                 Tap to log instantly
               </Caption>
               {usuals.map((usual) => (
-                <Pressable
-                  key={usual.id}
-                  onPress={() => void logUsualDirectly(usual)}
-                  style={styles.usualRow}
-                >
-                  <View style={styles.rowInfo}>
-                    <Body>{usual.displayName}</Body>
-                    <Caption style={styles.rowMeta} color={colors.textFaint}>
-                      {usual.servings === 1 ? '1 serving' : `${usual.servings} servings`}
-                    </Caption>
-                  </View>
-                  <Body color={metricColors.food}>
-                    {Math.round(usual.calories * usual.servings)} kcal
-                  </Body>
+                <Pressable key={usual.id} onPress={() => void logUsualDirectly(usual)}>
+                  <GradientSurface
+                    gradient={theme.metricGradients.food}
+                    id={`usual-${usual.id}`}
+                    style={styles.usualRow}
+                    borderRadius={radius.lg}
+                    opacity={theme.isDark ? [0.24, 0.08] : [0.16, 0.05]}
+                  >
+                    <GradientBadge
+                      icon="flash"
+                      gradient={theme.metricGradients.food}
+                      id={`usual-badge-${usual.id}`}
+                      size={26}
+                    />
+                    <View style={styles.rowInfo}>
+                      <Body>{usual.displayName}</Body>
+                      <Caption style={styles.rowMeta} color={colors.textFaint}>
+                        {usual.servings === 1 ? '1 serving' : `${usual.servings} servings`}
+                      </Caption>
+                    </View>
+                    <View style={styles.calorieGroup}>
+                      <Body style={styles.rowCalories} color={metricColors.food}>
+                        {Math.round(usual.calories * usual.servings)}
+                      </Body>
+                      <Caption style={styles.calorieUnit} color={colors.textFaint}>
+                        kcal
+                      </Caption>
+                    </View>
+                  </GradientSurface>
                 </Pressable>
               ))}
             </View>
@@ -343,7 +361,14 @@ export default function FoodScreen() {
                   </View>
 
                   <View style={styles.rowRight}>
-                    <Body color={colors.textMuted}>{Math.round(food.calories)} kcal</Body>
+                    <View style={styles.calorieGroup}>
+                      <Body style={styles.rowCalories} color={metricColors.food}>
+                        {Math.round(food.calories)}
+                      </Body>
+                      <Caption style={styles.calorieUnit} color={colors.textFaint}>
+                        kcal
+                      </Caption>
+                    </View>
                     <Pressable
                       onPress={() => void saveAsUsual(food)}
                       hitSlop={10}
@@ -404,25 +429,27 @@ const makeStyles = (t: Theme) =>
     usualRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: t.metricTints.food,
-      borderRadius: radius.md,
+      gap: spacing.md,
       padding: spacing.lg,
       marginBottom: spacing.sm,
+      backgroundColor: t.colors.surface,
+      ...t.shadows.card,
     },
     foodRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: t.colors.surface,
-      borderWidth: 1,
-      borderColor: t.colors.border,
       borderRadius: radius.md,
       padding: spacing.lg,
       marginBottom: spacing.sm,
       marginTop: spacing.sm,
+      ...t.shadows.card,
     },
     rowInfo: { gap: 2, flex: 1 },
+    rowCalories: { fontWeight: '700', fontSize: 17 },
+    calorieGroup: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
+    calorieUnit: { textTransform: 'none', letterSpacing: 0, fontWeight: '500' },
     rowMeta: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
     rowRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
     empty: { marginTop: spacing.md },
