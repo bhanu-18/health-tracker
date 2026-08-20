@@ -8,6 +8,7 @@ import { EditMealSheet } from '../../src/components/EditMealSheet';
 import { SwipeToDelete } from '../../src/components/SwipeToDelete';
 import { Toast } from '../../src/components/Toast';
 import { MetricCard } from '../../src/components/MetricCard';
+import { SleepStages } from '../../src/components/SleepStages';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { Screen } from '../../src/components/Screen';
 import { Body, Caption, Heading, Title } from '../../src/components/Typography';
@@ -16,13 +17,14 @@ import type { FoodLogEntry, WeightEntryRow } from '../../src/db/schema';
 import { useDailyHealth } from '../../src/hooks/useDailyHealth';
 import { averageOf, useWeeklyHealth } from '../../src/hooks/useWeeklyHealth';
 import { useRefreshOnForeground } from '../../src/hooks/useRefreshOnForeground';
-import { formatLongDate, greetingFor, today } from '../../src/lib/dates';
+import { addDays, formatLongDate, greetingFor, today } from '../../src/lib/dates';
 import { describeFreshness, isStale } from '../../src/lib/freshness';
 import { calculateEnergyBalance } from '../../src/lib/nutrition';
 import { formatWeightDelta, fromKg } from '../../src/lib/units';
 import { calculateWeightTrend } from '../../src/lib/weight';
 import { isUsingMockHealthData } from '../../src/services/health';
 import { totalsFor, useFoodLog } from '../../src/stores/foodLog';
+import { useSelectedDate } from '../../src/stores/selectedDate';
 import {
   selectCalorieTarget,
   selectStepGoal,
@@ -59,7 +61,16 @@ export default function TodayScreen() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(makeStyles);
-  const date = today();
+  const date = useSelectedDate((s) => s.date);
+  const setDate = useSelectedDate((s) => s.setDate);
+
+  const isToday = date === today();
+  const goBack = () => setDate(addDays(date, -1));
+  // Forward stops at today: there is nothing to show for tomorrow, and letting
+  // someone walk into empty future days looks like the app has lost its data.
+  const goForward = () => {
+    if (!isToday) setDate(addDays(date, 1));
+  };
 
   const { metrics, isLoading, refresh: refreshToday } = useDailyHealth(date);
   const { days, refresh: refreshWeek } = useWeeklyHealth(date);
@@ -148,18 +159,35 @@ export default function TodayScreen() {
   return (
     <Screen onRefresh={() => void refreshAll()} isRefreshing={isRefreshing}>
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Caption>{formatLongDate(date)}</Caption>
-          <Heading style={styles.greeting}>{greetingFor()}</Heading>
+          <Heading style={styles.greeting}>{isToday ? greetingFor() : 'That day'}</Heading>
         </View>
-        <Pressable
-          onPress={() => router.push('/settings')}
-          hitSlop={10}
-          accessibilityLabel="Settings"
-          style={styles.settingsButton}
-        >
-          <Ionicons name="settings-outline" size={20} color={theme.colors.textMuted} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={goBack} hitSlop={8} accessibilityLabel="Previous day">
+            <Ionicons name="chevron-back" size={22} color={theme.colors.textMuted} />
+          </Pressable>
+          <Pressable
+            onPress={goForward}
+            hitSlop={8}
+            disabled={isToday}
+            accessibilityLabel="Next day"
+          >
+            <Ionicons
+              name="chevron-forward"
+              size={22}
+              color={isToday ? theme.colors.border : theme.colors.textMuted}
+            />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/settings')}
+            hitSlop={10}
+            accessibilityLabel="Settings"
+            style={styles.settingsButton}
+          >
+            <Ionicons name="settings-outline" size={20} color={theme.colors.textMuted} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Says how old the health figures are.
@@ -297,6 +325,27 @@ export default function TodayScreen() {
         />
       </View>
 
+      {metrics?.sleepStages ? <SleepStages stages={metrics.sleepStages} /> : null}
+
+      {metrics?.restingHeartRate != null ? (
+        <View style={styles.statRow}>
+          <MetricCard
+            label="Resting heart rate"
+            metric="sleep"
+            icon="heart"
+            value={String(metrics.restingHeartRate)}
+            unit="bpm"
+            history={days.map((d) => d.restingHeartRate)}
+            detail={
+              comparedToAverage(
+                metrics.restingHeartRate,
+                averageOf(days, (d) => d.restingHeartRate, { excludeLast: true }),
+              ) ?? 'today'
+            }
+          />
+        </View>
+      ) : null}
+
       <View style={styles.mealsSection}>
         <View style={styles.sectionHeader}>
           <Title style={styles.sectionTitle}>Today&apos;s meals</Title>
@@ -370,6 +419,8 @@ const makeStyles = (t: Theme) =>
       justifyContent: 'space-between',
     },
     greeting: { marginTop: spacing.xs },
+    headerLeft: { flex: 1 },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
     freshnessRow: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -52,6 +52,31 @@ export type DailyHealthMetrics = {
   sleepHours: number | null;
 
   /**
+   * How that sleep broke down, in hours. Null when no staged data exists --
+   * some sources record only "asleep" with no stages at all.
+   *
+   * Each stage is deduplicated independently, by the same interval union used
+   * for the total. One consequence worth knowing: if two sources disagree about
+   * a stretch -- one calling it core, the other deep -- both stages count it,
+   * so the stages can sum to slightly more than `sleepHours`. For a single
+   * source, which is the normal case, they agree exactly.
+   */
+  sleepStages: {
+    deepHours: number;
+    coreHours: number;
+    remHours: number;
+    awakeHours: number;
+  } | null;
+
+  /**
+   * Resting heart rate, in beats per minute.
+   *
+   * Changes slowly, so it complements the daily metrics rather than repeating
+   * them: a rise sustained over days means something the step count does not.
+   */
+  restingHeartRate: number | null;
+
+  /**
    * When the most recent sample behind these figures was recorded.
    *
    * Not decoration. Data can arrive here through a long chain -- a band syncs
