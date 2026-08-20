@@ -47,6 +47,11 @@ export async function logMeal(input: LogMealInput): Promise<FoodLogEntry> {
   return row;
 }
 
+/** Every entry ever logged, oldest first. For export only. */
+export async function getAllEntries(): Promise<FoodLogEntry[]> {
+  return db.select().from(foodLogEntries).orderBy(foodLogEntries.date, foodLogEntries.loggedAt);
+}
+
 /** Everything logged on one day, oldest first so the list reads chronologically. */
 export async function getEntriesForDate(date: string): Promise<FoodLogEntry[]> {
   return db

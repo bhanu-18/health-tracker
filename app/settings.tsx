@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, Share, StyleSheet, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
 import { Screen } from '../src/components/Screen';
 import { Toast } from '../src/components/Toast';
 import { Body, Caption, Heading } from '../src/components/Typography';
 import { getHealthProvider, isUsingMockHealthData } from '../src/services/health';
+import { getAllEntries } from '../src/db/repositories/foodLog';
+import { getAllWeightEntries } from '../src/db/repositories/weight';
+import { buildFullExport } from '../src/lib/export';
+import { today } from '../src/lib/dates';
 import { fromKg, toKg, type WeightUnit } from '../src/lib/units';
 import {
   selectCalorieTarget,
@@ -39,6 +43,7 @@ export default function SettingsScreen() {
   const weightUnit = useProfile(selectWeightUnit);
   const updateProfile = useProfile((s) => s.update);
   const themeMode = useThemeMode();
+  const theme = useTheme();
 
   const [calories, setCalories] = useState(String(calorieTarget));
   const [steps, setSteps] = useState(String(stepGoal));
@@ -83,6 +88,39 @@ export default function SettingsScreen() {
     // Only the display unit changes. Stored weights stay in kilograms, so
     // nothing is converted and no history is touched.
     await updateProfile({ weightUnit: next });
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  /**
+   * Hand the whole log to the iOS share sheet.
+   *
+   * Shared as text rather than written to a file, because a file export needs
+   * expo-file-system and expo-sharing -- both native, both a rebuild. React
+   * Native's Share is built in, and the share sheet still offers Files, Mail
+   * and AirDrop, so the data reaches the same places. Worth revisiting at the
+   * next rebuild for large logs.
+   */
+  const exportData = async () => {
+    setIsExporting(true);
+    setError(null);
+    try {
+      const [entries, weights] = await Promise.all([getAllEntries(), getAllWeightEntries()]);
+      if (entries.length === 0 && weights.length === 0) {
+        setError('Nothing to export yet.');
+        return;
+      }
+
+      await Share.share({
+        title: `Health Tracker export ${today()}`,
+        message: buildFullExport(entries, weights, today()),
+      });
+      setStatus('Export ready');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not export your data.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const save = async () => {
@@ -206,6 +244,17 @@ export default function SettingsScreen() {
 
       <Button label="Save goals" onPress={() => void save()} />
 
+      <Heading style={styles.section}>Your data</Heading>
+      <Body style={styles.dataHint} color={theme.colors.textMuted}>
+        Everything is stored on this phone only. Export a copy so it survives losing or reinstalling
+        the app.
+      </Body>
+      <Button
+        label={isExporting ? 'Preparing...' : 'Export as CSV'}
+        variant="secondary"
+        onPress={() => void exportData()}
+      />
+
       <Toast message={status} onDismiss={() => setStatus(null)} />
     </Screen>
   );
@@ -234,7 +283,8 @@ const makeStyles = (t: Theme) =>
       marginTop: spacing.md,
       gap: spacing.lg,
     },
-    section: { marginTop: spacing.xl },
+    section: { marginTop: spacing.xxl },
+    dataHint: { fontSize: 14, marginTop: spacing.sm, marginBottom: spacing.lg },
     form: { gap: spacing.lg, marginTop: spacing.md },
     row: { gap: spacing.xs },
     unitLabel: { marginTop: spacing.xl, marginBottom: spacing.sm },
