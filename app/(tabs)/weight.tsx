@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { AnimatedNumber } from '../../src/components/AnimatedNumber';
 import { Button } from '../../src/components/Button';
+import { GradientBadge } from '../../src/components/GradientBadge';
+import { GradientSurface } from '../../src/components/GradientSurface';
 import { Screen } from '../../src/components/Screen';
 import { TrendChart, type TrendPoint } from '../../src/components/TrendChart';
 import { Body, Caption, Display, Heading, Title } from '../../src/components/Typography';
@@ -25,6 +28,7 @@ import { useTheme, useThemedStyles } from '../../src/theme/useTheme';
 export default function WeightScreen() {
   const { colors, metricColors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const theme = useTheme();
   const unit = useProfile(selectWeightUnit);
   const goalWeightKg = useProfile(selectGoalWeightKg);
   const updateProfile = useProfile((s) => s.update);
@@ -101,15 +105,26 @@ export default function WeightScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Caption>Current weight</Caption>
+        <View style={styles.headerLeft}>
+          <GradientBadge icon="trending-down" gradient={theme.metricGradients.weight} id="weight" />
+          <Caption>Current weight</Caption>
+        </View>
         <Pressable onPress={toggleUnit} hitSlop={8} accessibilityLabel="Switch weight unit">
           <Caption color={metricColors.weight}>{unit === 'kg' ? 'Show lb' : 'Show kg'}</Caption>
         </Pressable>
       </View>
 
-      <Display color={latestKg == null ? colors.textFaint : colors.text}>
-        {latestKg == null ? '--' : fromKg(latestKg, unit).toFixed(1)}
-      </Display>
+      {latestKg == null ? (
+        <Display color={colors.textFaint}>--</Display>
+      ) : (
+        /* Counts up like the dashboard hero. The tenth is animated separately
+           via the format function, since AnimatedNumber works in integers. */
+        <AnimatedNumber
+          value={Math.round(fromKg(latestKg, unit) * 10)}
+          format={(v) => (v / 10).toFixed(1)}
+          style={styles.heroNumber}
+        />
+      )}
       <Title style={styles.unitLabel} color={colors.textMuted}>
         {unit}
       </Title>
@@ -119,14 +134,20 @@ export default function WeightScreen() {
         {trend.deltaKg != null ? ' vs the previous week' : ''}
       </Body>
 
-      <View style={styles.card}>
+      <GradientSurface
+        gradient={theme.metricGradients.weight}
+        id="weight-chart"
+        style={styles.card}
+        borderRadius={radius.lg}
+        opacity={theme.isDark ? [0.18, 0.04] : [0.1, 0.02]}
+      >
         <TrendChart
           points={points}
-          color={metricColors.weight}
+          gradient={theme.metricGradients.weight}
           goal={goalWeightKg != null ? fromKg(goalWeightKg, unit) : null}
           formatValue={(value) => value.toFixed(1)}
         />
-      </View>
+      </GradientSurface>
 
       <Heading style={styles.sectionHeading}>Log today</Heading>
       <View style={styles.entryRow}>
@@ -166,15 +187,21 @@ const makeStyles = (t: Theme) =>
       alignItems: 'center',
       justifyContent: 'space-between',
     },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: t.spacing.md },
+    heroNumber: {
+      fontFamily: t.fonts.display,
+      fontSize: t.fontSize.hero,
+      lineHeight: t.fontSize.hero * 1.05,
+      letterSpacing: -1.5,
+      color: t.colors.text,
+    },
     unitLabel: { fontWeight: '500', marginTop: spacing.xs },
     trend: { marginTop: spacing.sm },
     card: {
       marginTop: spacing.xl,
       padding: spacing.lg,
       backgroundColor: t.colors.surface,
-      borderWidth: 1,
-      borderColor: t.colors.border,
-      borderRadius: radius.md,
+      ...t.shadows.card,
     },
     sectionHeading: { fontSize: 20, marginTop: spacing.xl, marginBottom: spacing.md },
     entryRow: {
@@ -182,9 +209,8 @@ const makeStyles = (t: Theme) =>
       alignItems: 'center',
       gap: spacing.sm,
       backgroundColor: t.colors.surface,
-      borderWidth: 1,
-      borderColor: t.colors.border,
       borderRadius: radius.md,
+      ...t.shadows.card,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       marginBottom: spacing.lg,

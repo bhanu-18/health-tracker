@@ -38,6 +38,36 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
 jest.mock('@expo/vector-icons/Ionicons', () => 'Ionicons');
 
 /**
+ * Animated numbers render their final value immediately in tests.
+ *
+ * The real component counts up over ~900ms, which races waitFor's one-second
+ * default: it passed on a fast laptop and failed on a slower CI runner. That
+ * flake reached CI once.
+ *
+ * The animation is covered directly in AnimatedNumber.test.tsx, which opts out
+ * of this stub and controls the clock. Everywhere else it is incidental --
+ * screen tests care what the number IS, not how it arrived.
+ */
+
+jest.mock('./src/components/AnimatedNumber', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Text } = require('react-native');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const react = require('react');
+  return {
+    AnimatedNumber: ({
+      value,
+      style,
+      format,
+    }: {
+      value: number;
+      style?: unknown;
+      format?: (v: number) => string;
+    }) => react.createElement(Text, { style }, format ? format(value) : String(value)),
+  };
+});
+
+/**
  * A stub SQLite connection, so modules that import the database can be loaded.
  *
  * expo-sqlite is native and has no Node build, so importing src/db/client
