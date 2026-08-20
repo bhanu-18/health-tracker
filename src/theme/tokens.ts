@@ -150,14 +150,92 @@ export const fontSize = {
  * string here keeps the key names checked (a typo is still an error) while
  * letting the two palettes share a type.
  */
+/** Widened for the same reason as the palettes: `as const` makes literals. */
+type Shadow = {
+  shadowColor: string;
+  shadowOffset: { width: number; height: number };
+  shadowOpacity: number;
+  shadowRadius: number;
+  elevation: number;
+};
+
 type Palette = Record<keyof typeof lightColors, string>;
 type MetricPalette = Record<MetricKey, string>;
+
+/**
+ * Gradient pairs per metric, [from, to].
+ *
+ * Each stays within its metric's hue rather than crossing into another -- a
+ * coral-to-purple sweep would look striking once and then make two metrics
+ * indistinguishable at a glance, which is the whole point of the colour coding.
+ */
+const metricGradientsLight = {
+  food: ['#F0785C', '#D9543B'],
+  weight: ['#E0A34A', '#C67A16'],
+  steps: ['#35A192', '#1F7A6F'],
+  sleep: ['#8B7ABA', '#6B5B95'],
+} as const;
+
+const metricGradientsDark = {
+  food: ['#F5A48E', '#E06A4E'],
+  weight: ['#EDBA6B', '#D08F2C'],
+  steps: ['#6FD0BF', '#3A9C8C'],
+  sleep: ['#BCACE0', '#8877B8'],
+} as const;
+
+/**
+ * Elevation.
+ *
+ * Deliberately soft and tinted rather than the default black: a grey drop
+ * shadow on a warm background reads as dirt. Kept to two levels, because a
+ * third invites every card to argue about which is more important.
+ */
+const shadowsLight = {
+  card: {
+    shadowColor: '#7C6A5A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  raised: {
+    shadowColor: '#7C6A5A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+} as const;
+
+/**
+ * On a dark background a shadow cannot be seen, so depth comes from a lighter
+ * surface instead. These stay defined so components need no branching, but the
+ * opacity is low enough to be almost inert.
+ */
+const shadowsDark = {
+  card: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  raised: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+} as const;
 
 export type Theme = {
   isDark: boolean;
   colors: Palette;
   metricColors: MetricPalette;
   metricTints: MetricPalette;
+  metricGradients: Record<MetricKey, readonly [string, string]>;
+  shadows: Record<keyof typeof shadowsLight, Shadow>;
   fonts: typeof fonts;
   spacing: typeof spacing;
   radius: typeof radius;
@@ -171,6 +249,8 @@ export const lightTheme: Theme = {
   colors: lightColors,
   metricColors: metricColorsLight,
   metricTints: metricTintsLight,
+  metricGradients: metricGradientsLight,
+  shadows: shadowsLight,
   ...shared,
 };
 
@@ -179,6 +259,8 @@ export const darkTheme: Theme = {
   colors: darkColors,
   metricColors: metricColorsDark,
   metricTints: metricTintsDark,
+  metricGradients: metricGradientsDark,
+  shadows: shadowsDark,
   ...shared,
 };
 

@@ -111,7 +111,7 @@ describe('TodayScreen', () => {
     // the await you destructure a Promise and every query is undefined.
     const { getByText } = await render(<TodayScreen />);
 
-    expect(getByText(/calories remaining|calories over budget/i)).toBeTruthy();
+    expect(getByText(/kcal left|over budget/i)).toBeTruthy();
 
     // Let the async health read settle inside the test, so its state update is
     // not left to fire after teardown (which React warns about, and which would
