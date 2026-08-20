@@ -5,6 +5,7 @@ import { AddIngredientSheet, type NewIngredient } from '../../src/components/Add
 import { Button } from '../../src/components/Button';
 import { Screen } from '../../src/components/Screen';
 import { SwipeToDelete } from '../../src/components/SwipeToDelete';
+import { Toast } from '../../src/components/Toast';
 import { Body, Caption, Display, Heading, Title } from '../../src/components/Typography';
 import {
   addIngredient,
@@ -41,6 +42,7 @@ export default function RecipeDetailScreen() {
 
   const [recipe, setRecipe] = useState<RecipeWithIngredients | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -68,6 +70,7 @@ export default function RecipeDetailScreen() {
     });
     setSheetOpen(false);
     await load();
+    setToast(`Added ${ingredient.name}`);
   };
 
   /**
@@ -78,9 +81,12 @@ export default function RecipeDetailScreen() {
    * confirm step on a reversible action is friction that trains people to
    * dismiss dialogs without reading them.
    */
-  const handleRemove = async (ingredientId: string) => {
+  const handleRemove = async (ingredientId: string, name: string) => {
     await removeIngredient(ingredientId);
     await load();
+    // Confirms what was removed, since the row is already gone from the list
+    // by the time the user reads it.
+    setToast(`Removed ${name}`);
   };
 
   const logOneServing = async () => {
@@ -140,7 +146,7 @@ export default function RecipeDetailScreen() {
           <SwipeToDelete
             key={ingredient.id}
             label={`${ingredient.name}, ${Math.round(ingredient.calories)} kcal`}
-            onDelete={() => void handleRemove(ingredient.id)}
+            onDelete={() => void handleRemove(ingredient.id, ingredient.name)}
           >
             <View style={styles.ingredientRow}>
               <View style={styles.ingredientInfo}>
@@ -177,6 +183,8 @@ export default function RecipeDetailScreen() {
         onCancel={() => setSheetOpen(false)}
         onAdd={(ingredient) => void handleAdd(ingredient)}
       />
+
+      <Toast message={toast} onDismiss={() => setToast(null)} />
     </Screen>
   );
 }

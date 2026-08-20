@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
 import { Screen } from '../src/components/Screen';
+import { Toast } from '../src/components/Toast';
 import { Body, Caption, Heading } from '../src/components/Typography';
 import { getHealthProvider, isUsingMockHealthData } from '../src/services/health';
 import { fromKg, toKg, type WeightUnit } from '../src/lib/units';
@@ -42,6 +43,19 @@ export default function SettingsScreen() {
   );
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Editing anything clears a previous confirmation.
+   *
+   * Otherwise "Saved" keeps sitting there over fields that have since been
+   * changed and not saved -- a message that is not merely stale but actively
+   * wrong about the current state.
+   */
+  const edit = (setter: (value: string) => void) => (value: string) => {
+    setStatus(null);
+    setError(null);
+    setter(value);
+  };
 
   /**
    * Re-seed the goal weight when the display unit changes.
@@ -94,7 +108,7 @@ export default function SettingsScreen() {
         // Converted at the edge: storage is always kilograms.
         goalWeightKg: goalValue != null ? toKg(goalValue, weightUnit) : null,
       });
-      setStatus('Saved');
+      setStatus('Goals saved');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save your settings.');
     }
@@ -116,21 +130,21 @@ export default function SettingsScreen() {
         <FormField
           label="Daily calories"
           value={calories}
-          onChangeText={setCalories}
+          onChangeText={edit(setCalories)}
           keyboardType="number-pad"
           suffix="kcal"
         />
         <FormField
           label="Daily steps"
           value={steps}
-          onChangeText={setSteps}
+          onChangeText={edit(setSteps)}
           keyboardType="number-pad"
           suffix="steps"
         />
         <FormField
           label="Goal weight"
           value={goalWeight}
-          onChangeText={setGoalWeight}
+          onChangeText={edit(setGoalWeight)}
           keyboardType="decimal-pad"
           suffix={weightUnit}
           placeholder="Optional"
@@ -160,13 +174,10 @@ export default function SettingsScreen() {
           {error}
         </Body>
       ) : null}
-      {status && !error ? (
-        <Body style={styles.status} color={colors.success}>
-          {status}
-        </Body>
-      ) : null}
 
       <Button label="Save goals" onPress={() => void save()} />
+
+      <Toast message={status} onDismiss={() => setStatus(null)} />
     </Screen>
   );
 }
@@ -206,5 +217,4 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   unitHint: { fontSize: 13, marginTop: spacing.sm, marginBottom: spacing.xl },
   error: { marginBottom: spacing.md, fontSize: 14 },
-  status: { marginBottom: spacing.md, fontSize: 14 },
 });
