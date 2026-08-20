@@ -106,6 +106,35 @@ describe('SettingsScreen', () => {
     expect(mockUpdate.mock.calls[0]![0].goalWeightKg).toBeNull();
   });
 
+  it('confirms a successful save', async () => {
+    const { getByLabelText, getByText } = await render(<SettingsScreen />);
+
+    fireEvent.changeText(getByLabelText('Daily calories'), '2100');
+    await waitFor(() => expect(getByLabelText('Daily calories').props.value).toBe('2100'));
+
+    fireEvent.press(getByText('Save goals'));
+
+    await waitFor(() => expect(getByText('Goals saved')).toBeTruthy());
+  });
+
+  /**
+   * The bug the toast replaced: the old message never cleared, so "Saved" kept
+   * sitting above fields that had since been edited and not saved -- not merely
+   * stale, but wrong about the current state.
+   */
+  it('clears the confirmation as soon as a field is edited again', async () => {
+    const { getByLabelText, getByText, queryByText } = await render(<SettingsScreen />);
+
+    fireEvent.changeText(getByLabelText('Daily calories'), '2100');
+    await waitFor(() => expect(getByLabelText('Daily calories').props.value).toBe('2100'));
+    fireEvent.press(getByText('Save goals'));
+    await waitFor(() => expect(getByText('Goals saved')).toBeTruthy());
+
+    fireEvent.changeText(getByLabelText('Daily calories'), '2200');
+
+    await waitFor(() => expect(queryByText('Goals saved')).toBeNull());
+  });
+
   it('changes only the display unit, touching no stored weight', async () => {
     const { getByLabelText } = await render(<SettingsScreen />);
 
