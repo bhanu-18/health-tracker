@@ -83,6 +83,12 @@ export default function RootLayout() {
             name="settings"
             options={{ headerShown: true, title: 'Settings', presentation: 'modal' }}
           />
+          {/* Recipes are pushed over the tabs rather than being a tab of their
+              own: they are reached from food logging, and a fifth tab would
+              crowd the bar for something used weekly rather than daily. */}
+          <Stack.Screen name="recipes/index" options={{ headerShown: true, title: 'Recipes' }} />
+          <Stack.Screen name="recipes/new" options={{ headerShown: true, title: 'New recipe' }} />
+          <Stack.Screen name="recipes/[id]" options={{ headerShown: true, title: 'Recipe' }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

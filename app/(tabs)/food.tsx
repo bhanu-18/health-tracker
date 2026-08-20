@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Button } from '../../src/components/Button';
 import { LogMealSheet, type LogMealTarget } from '../../src/components/LogMealSheet';
 import { Screen } from '../../src/components/Screen';
 import { SearchField } from '../../src/components/SearchField';
@@ -194,6 +195,14 @@ export default function FoodScreen() {
         <SearchField value={query} onChangeText={setQuery} />
       </View>
 
+      <View style={styles.recipesLink}>
+        <Button
+          label="Recipe library"
+          variant="secondary"
+          onPress={() => router.push('/recipes')}
+        />
+      </View>
+
       <View style={styles.filterRow}>
         {CALORIE_FILTERS.map((filter, index) => (
           <Pressable
@@ -289,6 +298,7 @@ export default function FoodScreen() {
 
 const styles = StyleSheet.create({
   searchWrap: { marginTop: spacing.lg },
+  recipesLink: { marginTop: spacing.md },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
