@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fontSize, radius, spacing } from '../theme/tokens';
+import { fontSize, radius, spacing } from '../theme/tokens';
+import type { Theme } from '../theme/tokens';
+import { useThemedStyles } from '../theme/useTheme';
 
 type Props = {
   /** The message to show. Null hides the toast. */
@@ -24,6 +26,7 @@ type Props = {
  * glimpsed, while a failure has to be read and understood.
  */
 export function Toast({ message, onDismiss, tone = 'success', durationMs }: Props) {
+  const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   /**
    * Held in state with a lazy initialiser rather than a ref.
@@ -85,24 +88,25 @@ export function Toast({ message, onDismiss, tone = 'success', durationMs }: Prop
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    position: 'absolute',
-    left: spacing.xl,
-    right: spacing.xl,
-    alignItems: 'center',
-  },
-  pill: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.pill,
-  },
-  pillError: { backgroundColor: colors.danger },
-  text: {
-    color: colors.primaryText,
-    fontSize: fontSize.body,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    wrap: {
+      position: 'absolute',
+      left: spacing.xl,
+      right: spacing.xl,
+      alignItems: 'center',
+    },
+    pill: {
+      backgroundColor: t.colors.primary,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+      borderRadius: radius.pill,
+    },
+    pillError: { backgroundColor: t.colors.danger },
+    text: {
+      color: t.colors.primaryText,
+      fontSize: fontSize.body,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+  });

@@ -1,13 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Caption, Title } from './Typography';
-import {
-  colors,
-  metricColors,
-  metricTints,
-  radius,
-  spacing,
-  type MetricKey,
-} from '../theme/tokens';
+import { radius, spacing, type MetricKey, type Theme } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/useTheme';
 
 type Props = {
   label: string;
@@ -27,6 +21,8 @@ type Props = {
  * the colour is how the user identifies the metric before reading the label.
  */
 export function StatCard({ label, value, unit, metric, detail }: Props) {
+  const { colors, metricColors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const accent = metricColors[metric];
   const hasValue = value != null;
 
@@ -49,44 +45,43 @@ export function StatCard({ label, value, unit, metric, detail }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.xs,
-    overflow: 'hidden',
-  },
-  // A 3pt colour rail along the top edge, instead of tinting the whole card.
-  accent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.xs,
-  },
-  value: {
-    fontSize: 24,
-  },
-  unit: {
-    textTransform: 'none',
-    letterSpacing: 0,
-    fontWeight: '500',
-  },
-  detail: {
-    textTransform: 'none',
-    letterSpacing: 0,
-    fontWeight: '400',
-    minHeight: 14,
-  },
-});
-
-export { metricTints };
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    card: {
+      flex: 1,
+      backgroundColor: t.colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      padding: spacing.lg,
+      gap: spacing.xs,
+      overflow: 'hidden',
+    },
+    // A 3pt colour rail along the top edge, instead of tinting the whole card.
+    accent: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+    },
+    valueRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: spacing.xs,
+    },
+    value: {
+      fontSize: 24,
+    },
+    unit: {
+      textTransform: 'none',
+      letterSpacing: 0,
+      fontWeight: '500',
+    },
+    detail: {
+      textTransform: 'none',
+      letterSpacing: 0,
+      fontWeight: '400',
+      minHeight: 14,
+    },
+  });

@@ -321,6 +321,14 @@ export const profile = sqliteTable('profile', {
     .notNull()
     .default('kg'),
 
+  /**
+   * Appearance. 'auto' follows the phone, which is the right default: the
+   * system setting is usually deliberate, and often on a schedule.
+   */
+  themeMode: text('theme_mode', { enum: ['light', 'dark', 'auto'] })
+    .notNull()
+    .default('auto'),
+
   updatedAt: timestamp('updated_at'),
 });
 

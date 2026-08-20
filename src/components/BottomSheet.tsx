@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Heading } from './Typography';
-import { colors, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
+import type { Theme } from '../theme/tokens';
+import { useThemedStyles } from '../theme/useTheme';
 
 type Props = {
   visible: boolean;
@@ -34,6 +36,7 @@ type Props = {
  *     the header and footer stay reachable at any content length.
  */
 export function BottomSheet({ visible, title, onDismiss, children, footer }: Props) {
+  const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
 
   return (
@@ -66,34 +69,35 @@ export function BottomSheet({ visible, title, onDismiss, children, footer }: Pro
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(28, 25, 23, 0.35)',
-  },
-  avoider: { flex: 1, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
-    // A floor so the sheet does not shrink around short content, and a ceiling
-    // so it never fills the space it has been given. Both are percentages of
-    // the keyboard-adjusted area above, so they shrink together when the
-    // keyboard opens rather than overflowing.
-    minHeight: '55%',
-    maxHeight: '100%',
-  },
-  title: { fontSize: 22, marginBottom: spacing.lg },
-  // Takes the remaining height, so the footer stays pinned and the middle
-  // scrolls rather than pushing the footer off the bottom.
-  body: { flex: 1 },
-  footer: { paddingTop: spacing.lg },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: { flex: 1, justifyContent: 'flex-end' },
+    backdrop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(28, 25, 23, 0.35)',
+    },
+    avoider: { flex: 1, justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: t.colors.background,
+      borderTopLeftRadius: radius.lg,
+      borderTopRightRadius: radius.lg,
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xl,
+      // A floor so the sheet does not shrink around short content, and a ceiling
+      // so it never fills the space it has been given. Both are percentages of
+      // the keyboard-adjusted area above, so they shrink together when the
+      // keyboard opens rather than overflowing.
+      minHeight: '55%',
+      maxHeight: '100%',
+    },
+    title: { fontSize: 22, marginBottom: spacing.lg },
+    // Takes the remaining height, so the footer stays pinned and the middle
+    // scrolls rather than pushing the footer off the bottom.
+    body: { flex: 1 },
+    footer: { paddingTop: spacing.lg },
+  });

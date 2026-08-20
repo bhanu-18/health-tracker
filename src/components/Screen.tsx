@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
+import type { Theme } from '../theme/tokens';
+import { useThemedStyles } from '../theme/useTheme';
 
 type Props = {
   children: ReactNode;
@@ -14,6 +16,7 @@ type Props = {
  * handling so content never sits under the notch or the home indicator.
  */
 export function Screen({ children, scroll = true }: Props) {
+  const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const padding = {
     paddingTop: insets.top + spacing.lg,
@@ -36,12 +39,13 @@ export function Screen({ children, scroll = true }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    paddingHorizontal: spacing.xl,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: t.colors.background,
+    },
+    content: {
+      paddingHorizontal: spacing.xl,
+    },
+  });

@@ -14,7 +14,8 @@ import {
   selectWeightUnit,
   useProfile,
 } from '../src/stores/profile';
-import { colors, radius, spacing } from '../src/theme/tokens';
+import { radius, spacing, type Theme, type ThemeMode } from '../src/theme/tokens';
+import { useTheme, useThemeMode, useThemedStyles } from '../src/theme/useTheme';
 
 const parse = (value: string): number => {
   const parsed = Number.parseFloat(value);
@@ -30,11 +31,14 @@ const parse = (value: string): number => {
  * wrong by 200, with no way to correct it.
  */
 export default function SettingsScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const calorieTarget = useProfile(selectCalorieTarget);
   const stepGoal = useProfile(selectStepGoal);
   const goalWeightKg = useProfile(selectGoalWeightKg);
   const weightUnit = useProfile(selectWeightUnit);
   const updateProfile = useProfile((s) => s.update);
+  const themeMode = useThemeMode();
 
   const [calories, setCalories] = useState(String(calorieTarget));
   const [steps, setSteps] = useState(String(stepGoal));
@@ -169,6 +173,31 @@ export default function SettingsScreen() {
         history.
       </Body>
 
+      <Caption style={styles.unitLabel}>Appearance</Caption>
+      <View style={styles.unitRow}>
+        {(
+          [
+            { value: 'auto', label: 'Auto' },
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+          ] as { value: ThemeMode; label: string }[]
+        ).map((option) => (
+          <Pressable
+            key={option.value}
+            onPress={() => void updateProfile({ themeMode: option.value })}
+            style={[styles.chip, themeMode === option.value && styles.chipSelected]}
+            accessibilityLabel={`Appearance ${option.label}`}
+          >
+            <Body color={themeMode === option.value ? colors.primaryText : colors.text}>
+              {option.label}
+            </Body>
+          </Pressable>
+        ))}
+      </View>
+      <Body style={styles.unitHint} color={colors.textFaint}>
+        Auto follows your phone&apos;s setting, including any schedule you have set for it.
+      </Body>
+
       {error ? (
         <Body style={styles.error} color={colors.danger}>
           {error}
@@ -183,6 +212,9 @@ export default function SettingsScreen() {
 }
 
 function Row({ label, value }: { label: string; value: string }) {
+  // Its own hook call: styles are per-component now, not a module singleton.
+  const styles = useThemedStyles(makeStyles);
+
   return (
     <View style={styles.row}>
       <Caption>{label}</Caption>
@@ -191,30 +223,31 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginTop: spacing.md,
-    gap: spacing.lg,
-  },
-  section: { marginTop: spacing.xl },
-  form: { gap: spacing.lg, marginTop: spacing.md },
-  row: { gap: spacing.xs },
-  unitLabel: { marginTop: spacing.xl, marginBottom: spacing.sm },
-  unitRow: { flexDirection: 'row', gap: spacing.sm },
-  chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  unitHint: { fontSize: 13, marginTop: spacing.sm, marginBottom: spacing.xl },
-  error: { marginBottom: spacing.md, fontSize: 14 },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.md,
+      gap: spacing.lg,
+    },
+    section: { marginTop: spacing.xl },
+    form: { gap: spacing.lg, marginTop: spacing.md },
+    row: { gap: spacing.xs },
+    unitLabel: { marginTop: spacing.xl, marginBottom: spacing.sm },
+    unitRow: { flexDirection: 'row', gap: spacing.sm },
+    chip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.xl,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      backgroundColor: t.colors.surface,
+    },
+    chipSelected: { backgroundColor: t.colors.primary, borderColor: t.colors.primary },
+    unitHint: { fontSize: 13, marginTop: spacing.sm, marginBottom: spacing.xl },
+    error: { marginBottom: spacing.md, fontSize: 14 },
+  });

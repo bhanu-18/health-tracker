@@ -32,6 +32,7 @@ export type ProfileChanges = Partial<
     | 'carbsTargetG'
     | 'fatTargetG'
     | 'weightUnit'
+    | 'themeMode'
   >
 >;
 

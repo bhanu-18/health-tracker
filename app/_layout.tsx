@@ -8,7 +8,9 @@ import { Body, Heading } from '../src/components/Typography';
 import { useMigrations } from '../src/db/migrate';
 import { seedFoodDatabase } from '../src/db/seed/run';
 import { useProfile } from '../src/stores/profile';
-import { colors, spacing } from '../src/theme/tokens';
+import { spacing } from '../src/theme/tokens';
+import type { Theme } from '../src/theme/tokens';
+import { useTheme, useThemedStyles } from '../src/theme/useTheme';
 
 /**
  * Root layout. Wraps the app in the providers that must sit above every screen,
@@ -19,6 +21,9 @@ import { colors, spacing } from '../src/theme/tokens';
  * pass in testing and fail on a cold install.
  */
 export default function RootLayout() {
+  const theme = useTheme();
+  const { colors } = theme;
+  const styles = useThemedStyles(makeStyles);
   const { success, error } = useMigrations();
   const [seeded, setSeeded] = useState(false);
   const loadProfile = useProfile((s) => s.load);
@@ -70,7 +75,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
+        {/* Inverted against the page: light icons on a dark background and
+            vice versa. A fixed value leaves the clock invisible in one theme. */}
+        <StatusBar style={theme.isDark ? 'light' : 'dark'} />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -96,16 +103,17 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  errorText: {
-    textAlign: 'center',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.colors.background,
+      padding: spacing.xl,
+      gap: spacing.md,
+    },
+    errorText: {
+      textAlign: 'center',
+    },
+  });

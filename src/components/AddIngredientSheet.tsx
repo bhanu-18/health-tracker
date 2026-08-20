@@ -16,7 +16,9 @@ import {
   type IngredientSource,
   type IngredientUnit,
 } from '../lib/recipes';
-import { colors, metricColors, metricTints, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
+import type { Theme } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/useTheme';
 
 /**
  * Generous, because the list is scrollable and a short cap is indistinguishable
@@ -50,6 +52,8 @@ type Props = {
  * that the food's serving weight is missing or the unit is wrong.
  */
 export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
+  const { colors, metricColors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [foods, setFoods] = useState<Food[]>([]);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Food | null>(null);
@@ -312,49 +316,50 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  body: { flex: 1 },
-  confirm: { marginBottom: spacing.md },
-  // Flexes into whatever the sheet has left, rather than a fixed height that
-  // would leave dead space on a short list and clip a long one.
-  results: { flex: 1, marginTop: spacing.md },
-  noResults: { marginTop: spacing.lg, fontSize: 14 },
-  resultRow: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: 2,
-  },
-  selected: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    gap: 2,
-    marginBottom: spacing.lg,
-  },
-  amountRow: { flexDirection: 'row', gap: spacing.md },
-  quantityField: { flex: 1 },
-  unitsLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
-  unitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  preview: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: metricTints.food,
-    gap: spacing.xs,
-  },
-  previewMacros: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
-  warning: { fontSize: 14 },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    body: { flex: 1 },
+    confirm: { marginBottom: spacing.md },
+    // Flexes into whatever the sheet has left, rather than a fixed height that
+    // would leave dead space on a short list and clip a long one.
+    results: { flex: 1, marginTop: spacing.md },
+    noResults: { marginTop: spacing.lg, fontSize: 14 },
+    resultRow: {
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+      gap: 2,
+    },
+    selected: {
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      gap: 2,
+      marginBottom: spacing.lg,
+    },
+    amountRow: { flexDirection: 'row', gap: spacing.md },
+    quantityField: { flex: 1 },
+    unitsLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
+    unitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    chip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      backgroundColor: t.colors.surface,
+    },
+    chipSelected: { backgroundColor: t.colors.primary, borderColor: t.colors.primary },
+    preview: {
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
+      padding: spacing.lg,
+      borderRadius: radius.md,
+      backgroundColor: t.metricTints.food,
+      gap: spacing.xs,
+    },
+    previewMacros: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
+    warning: { fontSize: 14 },
+  });

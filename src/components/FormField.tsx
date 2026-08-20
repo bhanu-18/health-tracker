@@ -1,6 +1,8 @@
 import { StyleSheet, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { Caption } from './Typography';
-import { colors, fontSize, radius, spacing } from '../theme/tokens';
+import { fontSize, radius, spacing } from '../theme/tokens';
+import type { Theme } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/useTheme';
 
 type Props = {
   label: string;
@@ -22,6 +24,8 @@ export function FormField({
   suffix,
   autoFocus,
 }: Props) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.wrap}>
       <Caption>{label}</Caption>
@@ -49,25 +53,26 @@ export function FormField({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { gap: spacing.sm },
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  input: {
-    flex: 1,
-    fontSize: fontSize.body,
-    color: colors.text,
-    padding: 0,
-    minHeight: 24,
-  },
-  suffix: { textTransform: 'none', letterSpacing: 0 },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    wrap: { gap: spacing.sm },
+    field: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    input: {
+      flex: 1,
+      fontSize: fontSize.body,
+      color: t.colors.text,
+      padding: 0,
+      minHeight: 24,
+    },
+    suffix: { textTransform: 'none', letterSpacing: 0 },
+  });

@@ -1,6 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { colors, fontSize, radius, spacing } from '../theme/tokens';
+import { fontSize, radius, spacing } from '../theme/tokens';
+import type { Theme } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/useTheme';
 
 type Props = {
   value: string;
@@ -9,6 +11,8 @@ type Props = {
 };
 
 export function SearchField({ value, onChangeText, placeholder = 'Search foods' }: Props) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.wrap}>
       <Ionicons name="search" size={18} color={colors.textFaint} />
@@ -34,24 +38,25 @@ export function SearchField({ value, onChangeText, placeholder = 'Search foods' 
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  input: {
-    flex: 1,
-    fontSize: fontSize.body,
-    color: colors.text,
-    // Without an explicit height the field jumps as text is entered on Android.
-    minHeight: 22,
-    padding: 0,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    wrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    input: {
+      flex: 1,
+      fontSize: fontSize.body,
+      color: t.colors.text,
+      // Without an explicit height the field jumps as text is entered on Android.
+      minHeight: 22,
+      padding: 0,
+    },
+  });
