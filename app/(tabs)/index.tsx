@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { ProgressBar } from '../../src/components/ProgressBar';
@@ -7,7 +8,7 @@ import { StatCard } from '../../src/components/StatCard';
 import { Body, Caption, Display, Heading, Title } from '../../src/components/Typography';
 import { useDailyHealth } from '../../src/hooks/useDailyHealth';
 import { formatLongDate, greetingFor, today } from '../../src/lib/dates';
-import { calculateEnergyBalance } from '../../src/lib/nutrition';
+import { calculateEnergyBalance, sumNutrition } from '../../src/lib/nutrition';
 import { isUsingMockHealthData } from '../../src/services/health';
 import { useFoodLog } from '../../src/stores/foodLog';
 import { useProfile } from '../../src/stores/profile';
@@ -27,8 +28,14 @@ export default function TodayScreen() {
   const { metrics, isLoading } = useDailyHealth(date);
   const calorieTarget = useProfile((s) => s.calorieTarget);
   const stepGoal = useProfile((s) => s.stepGoal);
-  const entries = useFoodLog((s) => s.entriesFor(date));
-  const totals = useFoodLog((s) => s.totalsFor(date));
+  // Select the raw array, then derive. A selector must return a stable
+  // reference: Zustand compares results with Object.is, so a selector that
+  // filters or reduces builds a new object every call, which reads as "changed"
+  // and re-renders forever. `s.entries` only changes when an entry is actually
+  // added or removed.
+  const allEntries = useFoodLog((s) => s.entries);
+  const entries = useMemo(() => allEntries.filter((e) => e.date === date), [allEntries, date]);
+  const totals = useMemo(() => sumNutrition(entries), [entries]);
 
   const balance = calculateEnergyBalance({
     target: calorieTarget,
