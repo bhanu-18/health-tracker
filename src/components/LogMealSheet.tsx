@@ -1,7 +1,8 @@
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useState } from 'react';
+import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
-import { Body, Caption, Heading, Title } from './Typography';
+import { Body, Caption, Title } from './Typography';
 import type { MealSlot } from '../db/schema';
 import { scaleNutrition, type NutritionFacts } from '../lib/nutrition';
 import { colors, metricColors, metricTints, radius, spacing } from '../theme/tokens';
@@ -43,12 +44,22 @@ export function LogMealSheet({ target, defaultSlot, onCancel, onConfirm }: Props
   const totals = scaleNutrition(target.perServing, servings);
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onCancel}>
-      {/* Tapping the backdrop dismisses, which is the gesture people expect. */}
-      <Pressable style={styles.backdrop} onPress={onCancel} accessibilityLabel="Dismiss" />
-
-      <View style={styles.sheet}>
-        <Heading style={styles.name}>{target.name}</Heading>
+    <BottomSheet
+      visible
+      title={target.name}
+      onDismiss={onCancel}
+      footer={
+        <>
+          <Button label="Log it" onPress={() => onConfirm({ slot, servings, totals })} />
+          <View style={styles.cancel}>
+            <Button label="Cancel" variant="secondary" onPress={onCancel} />
+          </View>
+        </>
+      }
+    >
+      {/* Scrolls so the chips stay reachable on a small screen, while the
+          confirm button stays pinned in the sheet footer. */}
+      <ScrollView showsVerticalScrollIndicator={false}>
         <Body color={colors.textMuted}>{target.servingLabel}</Body>
 
         <Caption style={styles.sectionLabel}>Meal</Caption>
@@ -88,30 +99,12 @@ export function LogMealSheet({ target, defaultSlot, onCancel, onConfirm }: Props
             {`P ${totals.protein}g  ·  C ${totals.carbs}g  ·  F ${totals.fat}g`}
           </Body>
         </View>
-
-        <Button label="Log it" onPress={() => onConfirm({ slot, servings, totals })} />
-        <View style={styles.cancel}>
-          <Button label="Cancel" variant="secondary" onPress={onCancel} />
-        </View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(28, 25, 23, 0.35)',
-  },
-  sheet: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
-    gap: spacing.xs,
-  },
-  name: { fontSize: 24 },
   sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {

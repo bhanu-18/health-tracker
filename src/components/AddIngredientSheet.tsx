@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 import { FormField } from './FormField';
 import { SearchField } from './SearchField';
-import { Body, Caption, Heading } from './Typography';
+import { Body, Caption } from './Typography';
 import { getAllFoods } from '../db/repositories/foods';
 import type { Food } from '../db/schema';
 import { searchFoods } from '../lib/foodSearch';
@@ -138,12 +139,13 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel} accessibilityLabel="Dismiss" />
-
-      <View style={styles.sheet}>
-        <Heading style={styles.title}>Add ingredient</Heading>
-
+    <BottomSheet
+      visible={visible}
+      title="Add ingredient"
+      onDismiss={onCancel}
+      footer={<Button label="Cancel" variant="secondary" onPress={onCancel} />}
+    >
+      <View style={styles.body}>
         {selected ? (
           <>
             <Pressable onPress={() => setSelected(null)} style={styles.selected}>
@@ -201,13 +203,22 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
           </>
         ) : (
           <>
+            {/* The search field is the first thing in a fixed-height sheet, so
+                it stays in the same place regardless of how many results the
+                query returns. */}
             <SearchField value={query} onChangeText={setQuery} placeholder="Search ingredients" />
             {results.length === 0 ? (
               <Body style={styles.noResults} color={colors.textMuted}>
                 {`Nothing matches "${query}". Try another spelling, or add it as a new food first.`}
               </Body>
             ) : null}
-            <ScrollView style={styles.results} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              style={styles.results}
+              keyboardShouldPersistTaps="handled"
+              // Lets a tap dismiss the keyboard without stealing the tap from a
+              // result row, which "on-drag" alone would do.
+              keyboardDismissMode="on-drag"
+            >
               {results.map((food) => (
                 <Pressable
                   key={food.id}
@@ -231,27 +242,16 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
             </ScrollView>
           </>
         )}
-
-        <View style={styles.cancel}>
-          <Button label="Cancel" variant="secondary" onPress={onCancel} />
-        </View>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(28, 25, 23, 0.35)' },
-  sheet: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
-    maxHeight: '85%',
-  },
-  title: { fontSize: 22, marginBottom: spacing.lg },
-  results: { maxHeight: 340, marginTop: spacing.md },
+  body: { flex: 1 },
+  // Flexes into whatever the sheet has left, rather than a fixed height that
+  // would leave dead space on a short list and clip a long one.
+  results: { flex: 1, marginTop: spacing.md },
   noResults: { marginTop: spacing.lg, fontSize: 14 },
   resultRow: {
     paddingVertical: spacing.md,
@@ -291,5 +291,4 @@ const styles = StyleSheet.create({
   },
   previewMacros: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
   warning: { fontSize: 14 },
-  cancel: { marginTop: spacing.md },
 });
