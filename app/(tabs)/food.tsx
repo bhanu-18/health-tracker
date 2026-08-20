@@ -82,10 +82,20 @@ export default function FoodScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [foods] = await Promise.all([getAllFoods(), loadUsuals()]);
-      if (cancelled) return;
-      setCandidates(foods);
-      setIsLoading(false);
+      try {
+        const [foods] = await Promise.all([getAllFoods(), loadUsuals()]);
+        if (cancelled) return;
+        setCandidates(foods);
+      } catch (cause) {
+        // Without this the screen showed a spinner forever on a failed read:
+        // the rejection escaped, setIsLoading(false) never ran, and there was
+        // no path back. An empty library is recoverable; a permanent spinner
+        // with no explanation is not.
+        console.warn('[food] could not load the library:', cause);
+      } finally {
+        // In `finally`, so the spinner always clears -- success or failure.
+        if (!cancelled) setIsLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -112,6 +122,7 @@ export default function FoodScreen() {
   // the Today screen.
   const results = useMemo(() => {
     const filters = CALORIE_FILTERS[filterIndex]?.filters ?? {};
+    const sort = SORTS[sortIndex]?.value ?? 'relevance';
     return searchFoods(
       candidates.map((food) => ({
         id: food.id,
@@ -125,8 +136,12 @@ export default function FoodScreen() {
       })),
       query,
       filters,
+      sort,
     ).map((row) => row.food);
-  }, [candidates, query, filterIndex]);
+    // sortIndex belongs in the dependency list as much as the argument list:
+    // without it the memo would keep returning the previous order even once the
+    // argument was passed.
+  }, [candidates, query, filterIndex, sortIndex]);
 
   const openFood = (food: Food) => {
     setTarget({
@@ -296,7 +311,14 @@ export default function FoodScreen() {
               </Body>
             ) : (
               results.map((food) => (
-                <Pressable key={food.id} onPress={() => openFood(food)} style={styles.foodRow}>
+                <Pressable
+                  key={food.id}
+                  onPress={() => openFood(food)}
+                  style={styles.foodRow}
+                  // Stable handle for asserting result ORDER in tests. Matching
+                  // on rendered text picked up the sort chips themselves.
+                  testID={`food-row-${food.id}`}
+                >
                   <View style={styles.rowInfo}>
                     <Body>{food.name}</Body>
                     <Caption style={styles.rowMeta} color={colors.textFaint}>

@@ -56,6 +56,20 @@ jest.mock('../../src/db/repositories/foods', () => ({
   findFoodCandidates: jest.fn(async () => FOODS),
 }));
 
+/** The food rows, in the order the screen renders them. */
+const renderedOrder = (
+  getAllByTestId: (matcher: RegExp) => { props: Record<string, unknown> }[],
+): string[] => {
+  try {
+    return getAllByTestId(/^food-row-/).map((node) =>
+      String(node.props.testID).replace('food-row-', ''),
+    );
+  } catch {
+    // getAllBy* throws when nothing matches; an empty list is the useful answer.
+    return [];
+  }
+};
+
 jest.mock('../../src/db/repositories/usualMeals', () => ({
   getUsualMeals: jest.fn(async () => [
     {
@@ -137,6 +151,68 @@ describe('FoodScreen', () => {
     // after teardown -- which React warns about and which would mask genuine
     // warnings later.
     await waitFor(() => expect(findFoodCandidates).toHaveBeenCalledWith('channa'));
+  });
+
+  /**
+   * Regression test for a sort control wired to nothing.
+   *
+   * The chips rendered, highlighted on tap and updated their state -- and the
+   * state was never read, because the sort argument was missing from the
+   * searchFoods call. Every order looked alphabetical. Typecheck and lint were
+   * clean, because passing three arguments to a function whose fourth is
+   * optional is perfectly valid TypeScript.
+   *
+   * Asserting that the order CHANGES is the only thing that catches this. A
+   * test that merely renders the chips would have passed throughout.
+   */
+  it('reorders results when a sort is chosen', async () => {
+    const { getByText, getAllByTestId } = await render(<FoodScreen />);
+    await waitFor(() => expect(getByText('Chana masala')).toBeTruthy());
+
+    // f1 = Chana masala (310 kcal), f2 = Idli (58 kcal). Alphabetical first.
+    expect(renderedOrder(getAllByTestId)).toEqual(['f1', 'f2']);
+
+    fireEvent.press(getByText('Lowest calories'));
+
+    await waitFor(() => expect(renderedOrder(getAllByTestId)).toEqual(['f2', 'f1']));
+
+    // Let the screen's own loads finish inside this test. Left pending, they
+    // resolve during the next test's mount and interfere with its render.
+    await waitFor(() => expect(getUsualMeals).toHaveBeenCalled());
+  });
+
+  it('ranks by protein per calorie rather than raw protein', async () => {
+    const { getByText, getAllByTestId } = await render(<FoodScreen />);
+    await waitFor(() => expect(getByText('Chana masala')).toBeTruthy());
+
+    fireEvent.press(getByText('Most protein per kcal'));
+
+    // Idli: 1.6 g over 58 kcal = 2.8 per 100 kcal.
+    // Chana masala: 12 g over 310 kcal = 3.9 per 100 kcal, so it ranks first.
+    await waitFor(() => expect(renderedOrder(getAllByTestId)).toEqual(['f1', 'f2']));
+
+    // Let the screen's own loads finish inside this test. Left pending, they
+    // resolve during the next test's mount and interfere with its render.
+    await waitFor(() => expect(getUsualMeals).toHaveBeenCalled());
+  });
+
+  it('applies the sort within an active filter', async () => {
+    const { getByText, getAllByTestId } = await render(<FoodScreen />);
+    await waitFor(() => expect(getByText('Chana masala')).toBeTruthy());
+
+    fireEvent.press(getByText('Under 300'));
+    // Let the filter land before applying the sort. Firing both synchronously
+    // leaves concurrent renders in flight past the end of the test.
+    await waitFor(() => expect(renderedOrder(getAllByTestId)).toEqual(['f2']));
+
+    fireEvent.press(getByText('Lowest calories'));
+
+    // Only idli survives the filter, and the sort must not resurrect the other.
+    await waitFor(() => expect(renderedOrder(getAllByTestId)).toEqual(['f2']));
+
+    // Let the screen's own loads finish inside this test. Left pending, they
+    // resolve during the next test's mount and interfere with its render.
+    await waitFor(() => expect(getUsualMeals).toHaveBeenCalled());
   });
 
   it('opens the portion sheet when a food is chosen', async () => {
