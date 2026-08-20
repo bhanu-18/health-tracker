@@ -68,13 +68,38 @@ const ASLEEP_VALUES = new Set<number>([
 export class HealthKitProvider implements HealthProvider {
   readonly name = 'Apple Health';
 
+  /**
+   * Memoised authorisation request.
+   *
+   * Reads silently return nothing until HealthKit has been asked for access, so
+   * every read path goes through this first. Keeping it here rather than in a
+   * screen means no caller can forget -- which is exactly the bug that shipped
+   * the first time: requestPermissions() existed and nothing ever called it, so
+   * the dashboard showed "No data" and iOS never even prompted.
+   *
+   * The promise is stored, not the result, so concurrent first reads share one
+   * prompt instead of stacking several permission sheets.
+   */
+  private authorization: Promise<void> | null = null;
+
+  private ensureAuthorized(): Promise<void> {
+    if (!this.authorization) {
+      this.authorization = requestAuthorization({ toRead: READ_TYPES, toShare: [] })
+        .then(() => undefined)
+        // A rejection here means the prompt failed, not that access was denied.
+        // Reads still run and return null, which the UI renders as "no data".
+        .catch(() => undefined);
+    }
+    return this.authorization;
+  }
+
   async isAvailable(): Promise<boolean> {
     return isHealthDataAvailable();
   }
 
   async requestPermissions(): Promise<PermissionStatus> {
     if (!isHealthDataAvailable()) return 'unavailable';
-    await requestAuthorization({ toRead: READ_TYPES, toShare: [] });
+    await this.ensureAuthorized();
     return this.getPermissionStatus();
   }
 
@@ -96,6 +121,8 @@ export class HealthKitProvider implements HealthProvider {
   }
 
   async readDailyMetrics(date: ISODate): Promise<DailyHealthMetrics> {
+    await this.ensureAuthorized();
+
     // Run independently so one failing metric cannot blank the whole dashboard.
     const [steps, activeEnergyKcal, sleepHours] = await Promise.all([
       this.readSteps(date),
@@ -129,8 +156,11 @@ export class HealthKitProvider implements HealthProvider {
       );
       const sum = result.sumQuantity?.quantity;
       return sum == null ? null : Math.round(sum);
-    } catch {
-      // A throw means the read failed. Null keeps that distinct from a real 0.
+    } catch (cause) {
+      // A throw means the read failed. Null keeps that distinct from a real 0,
+      // but swallowing the cause silently makes "no data" undebuggable -- so
+      // the reason is always logged.
+      warnReadFailed('steps', cause);
       return null;
     }
   }
@@ -145,7 +175,8 @@ export class HealthKitProvider implements HealthProvider {
       );
       const sum = result.sumQuantity?.quantity;
       return sum == null ? null : Math.round(sum);
-    } catch {
+    } catch (cause) {
+      warnReadFailed('activeEnergy', cause);
       return null;
     }
   }
@@ -176,7 +207,8 @@ export class HealthKitProvider implements HealthProvider {
       // Samples existed but none meant "asleep" (only inBed/awake). That is a
       // real measurement of zero sleep, not missing data.
       return totalCoveredHours(asleep);
-    } catch {
+    } catch (cause) {
+      warnReadFailed('sleep', cause);
       return null;
     }
   }
@@ -190,6 +222,7 @@ export class HealthKitProvider implements HealthProvider {
    * inflating a total. `sourceName` is surfaced so duplicates are recognisable.
    */
   async readWorkouts(from: ISODate, to: ISODate): Promise<WorkoutSession[]> {
+    await this.ensureAuthorized();
     try {
       const workouts = await queryWorkoutSamples({
         filter: { date: { startDate: dayBounds(from).startDate, endDate: dayBounds(to).endDate } },
@@ -208,10 +241,23 @@ export class HealthKitProvider implements HealthProvider {
             : null,
         sourceName: 'Apple Health',
       }));
-    } catch {
+    } catch (cause) {
+      warnReadFailed('workouts', cause);
       return [];
     }
   }
+}
+
+/**
+ * A failed read and an empty day both surface as "no data" in the UI, which is
+ * correct for the user but useless for diagnosis. Logging the cause is what
+ * distinguishes "HealthKit threw" from "you genuinely have no data yet".
+ */
+function warnReadFailed(metric: string, cause: unknown): void {
+  console.warn(
+    `[health] ${metric} read failed:`,
+    cause instanceof Error ? cause.message : String(cause),
+  );
 }
 
 /** `traditionalStrengthTraining` -> `Traditional Strength Training`. */
