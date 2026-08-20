@@ -36,7 +36,8 @@
           "NSHealthUpdateUsageDescription": false,
           "background": false
         }
-      ]
+      ],
+      "./plugins/withSigningTeam"
     ]
   }
 }

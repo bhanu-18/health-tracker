@@ -6,13 +6,17 @@
     // Noisy at first, but it is precisely the class of bug that health data
     // (missing days, unsynced metrics) produces at runtime.
     "noUncheckedIndexedAccess": true,
-    // TypeScript 6 no longer picks these up automatically under `moduleResolution:
-    // bundler`, so the test globals (describe/it/expect) must be named here.
+    // TypeScript 6 no longer picks these up automatically under
+    // `moduleResolution: bundler`, so the test globals (describe/it/expect)
+    // must be named explicitly.
     "types": ["jest", "node"],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  // NOTE: `expo start` rewrites this file's `include` when it regenerates
+  // .expo/types, and reformats the whole file when it does -- which strips
+  // these comments. If they vanish, that is why.
+  "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules", "dist", "coverage"]
 }
