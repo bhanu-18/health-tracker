@@ -35,6 +35,52 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
+/**
+ * Mocked at the repository boundary, not at the store.
+ *
+ * The store imports the repository, which opens expo-sqlite -- a native module
+ * with no Node implementation, so importing it here throws. Replacing the
+ * repository keeps the real Zustand store in play, which matters because the
+ * bug this file exists to catch lives in how the screen selects from that
+ * store. Mocking the store instead would make the test pass by removing the
+ * very thing under test.
+ */
+jest.mock('../../src/db/repositories/foodLog', () => ({
+  getEntriesForDate: jest.fn(async () => [
+    {
+      id: '1',
+      date: '2026-08-19',
+      slot: 'breakfast',
+      name: 'Idli with sambar',
+      servings: 1,
+      calories: 285,
+      proteinG: 9,
+      carbsG: 52,
+      fatG: 4,
+      foodId: null,
+      recipeId: null,
+      loggedAt: 1,
+    },
+    {
+      id: '2',
+      date: '2026-08-19',
+      slot: 'lunch',
+      name: 'Chana masala',
+      servings: 1,
+      calories: 310,
+      proteinG: 12,
+      carbsG: 40,
+      fatG: 9,
+      foodId: null,
+      recipeId: null,
+      loggedAt: 2,
+    },
+  ]),
+  logMeal: jest.fn(),
+  deleteEntry: jest.fn(),
+  updateServings: jest.fn(),
+}));
+
 describe('TodayScreen', () => {
   it('renders without exceeding the maximum update depth', async () => {
     // A looping render rejects here, so reaching the assertion is the pass.
@@ -55,7 +101,8 @@ describe('TodayScreen', () => {
   it('shows the meals logged for today', async () => {
     const { getByText } = await render(<TodayScreen />);
 
-    expect(getByText('Chana masala')).toBeTruthy();
+    // Meals now load from the database, so they appear after the first render.
+    await waitFor(() => expect(getByText('Chana masala')).toBeTruthy());
     expect(getByText('Idli with sambar')).toBeTruthy();
 
     await waitFor(() => expect(getByText(/burned/i)).toBeTruthy());

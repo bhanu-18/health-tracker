@@ -1,14 +1,68 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { colors } from '../src/theme/tokens';
+import { Body, Heading } from '../src/components/Typography';
+import { useMigrations } from '../src/db/migrate';
+import { seedFoodDatabase } from '../src/db/seed/run';
+import { colors, spacing } from '../src/theme/tokens';
 
 /**
- * Root layout. Wraps the whole app once in the providers that must sit above
- * every screen, then hands off to the tab navigator.
+ * Root layout. Wraps the app in the providers that must sit above every screen,
+ * and gates rendering on the database being ready.
+ *
+ * Nothing may render before migrations finish: a screen that queries a table
+ * which does not exist yet crashes, and that race is intermittent, so it would
+ * pass in testing and fail on a cold install.
  */
 export default function RootLayout() {
+  const { success, error } = useMigrations();
+  const [seeded, setSeeded] = useState(false);
+
+  useEffect(() => {
+    if (!success) return;
+    let cancelled = false;
+
+    seedFoodDatabase()
+      .catch((cause) => {
+        // A failed seed is not fatal -- the app works with an empty food
+        // library, and the user can still add their own foods.
+        console.warn('[db] seeding failed:', cause);
+      })
+      .finally(() => {
+        if (!cancelled) setSeeded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [success]);
+
+  if (error) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.center}>
+          <Heading>Database error</Heading>
+          <Body style={styles.errorText} color={colors.textMuted}>
+            {error.message}
+          </Body>
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!success || !seeded) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.text} />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -23,14 +77,24 @@ export default function RootLayout() {
           {/* Settings is pushed over the tabs rather than being a tab of its own. */}
           <Stack.Screen
             name="settings"
-            options={{
-              headerShown: true,
-              title: 'Settings',
-              presentation: 'modal',
-            }}
+            options={{ headerShown: true, title: 'Settings', presentation: 'modal' }}
           />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  errorText: {
+    textAlign: 'center',
+  },
+});
