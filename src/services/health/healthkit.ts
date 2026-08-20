@@ -28,6 +28,7 @@ import type {
 const READ_TYPES = [
   'HKQuantityTypeIdentifierStepCount',
   'HKQuantityTypeIdentifierActiveEnergyBurned',
+  'HKQuantityTypeIdentifierRestingHeartRate',
   'HKCategoryTypeIdentifierSleepAnalysis',
   'HKWorkoutTypeIdentifier',
 ] as const;
@@ -64,6 +65,22 @@ const ASLEEP_VALUES = new Set<number>([
   CategoryValueSleepAnalysis.asleepDeep,
   CategoryValueSleepAnalysis.asleepREM,
 ]);
+
+/**
+ * Which category values belong to each reported stage.
+ *
+ * `asleepUnspecified` is deliberately absent: a source that records only
+ * "asleep" with no stage detail contributes to the total but cannot be
+ * attributed to deep, core or REM, and inventing an attribution would be
+ * making data up.
+ */
+const STAGE_VALUES = {
+  deep: [CategoryValueSleepAnalysis.asleepDeep],
+  core: [CategoryValueSleepAnalysis.asleepCore],
+  rem: [CategoryValueSleepAnalysis.asleepREM],
+  // `awake` is 2 in HealthKit's enum -- brief wakings inside a night.
+  awake: [2],
+} as const;
 
 export class HealthKitProvider implements HealthProvider {
   readonly name = 'Apple Health';
@@ -124,13 +141,43 @@ export class HealthKitProvider implements HealthProvider {
     await this.ensureAuthorized();
 
     // Run independently so one failing metric cannot blank the whole dashboard.
-    const [steps, activeEnergyKcal, sleepHours, lastRecordedAt] = await Promise.all([
+    const [steps, activeEnergyKcal, sleep, restingHeartRate, lastRecordedAt] = await Promise.all([
       this.readSteps(date),
       this.readActiveEnergy(date),
-      this.readSleepHours(date),
+      this.readSleep(date),
+      this.readRestingHeartRate(date),
       this.readLastRecordedAt(date),
     ]);
-    return { date, steps, activeEnergyKcal, sleepHours, lastRecordedAt };
+    return {
+      date,
+      steps,
+      activeEnergyKcal,
+      sleepHours: sleep.totalHours,
+      sleepStages: sleep.stages,
+      restingHeartRate,
+      lastRecordedAt,
+    };
+  }
+
+  /**
+   * Resting heart rate, averaged over the day.
+   *
+   * `discreteAverage` rather than a sum: this is a rate, and adding two
+   * readings of 58 bpm would produce a meaningless 116.
+   */
+  private async readRestingHeartRate(date: ISODate): Promise<number | null> {
+    try {
+      const result = await queryStatisticsForQuantity(
+        'HKQuantityTypeIdentifierRestingHeartRate',
+        ['discreteAverage'],
+        { filter: { date: dayBounds(date) }, unit: 'count/min' },
+      );
+      const average = result.averageQuantity?.quantity;
+      return average == null ? null : Math.round(average);
+    } catch (cause) {
+      warnReadFailed('restingHeartRate', cause);
+      return null;
+    }
   }
 
   /**
@@ -212,7 +259,9 @@ export class HealthKitProvider implements HealthProvider {
    * violation of the rule in types.ts: that rule forbids *summing* raw samples,
    * which is exactly what a union avoids.
    */
-  private async readSleepHours(date: ISODate): Promise<number | null> {
+  private async readSleep(
+    date: ISODate,
+  ): Promise<{ totalHours: number | null; stages: DailyHealthMetrics['sleepStages'] }> {
     try {
       const samples = await queryCategorySamples('HKCategoryTypeIdentifierSleepAnalysis', {
         filter: { date: sleepWindow(date) },
@@ -220,18 +269,35 @@ export class HealthKitProvider implements HealthProvider {
         ascending: true,
       });
 
-      if (samples.length === 0) return null;
+      if (samples.length === 0) return { totalHours: null, stages: null };
 
-      const asleep: Interval[] = samples
-        .filter((sample) => ASLEEP_VALUES.has(sample.value as number))
-        .map((sample) => ({ start: sample.startDate, end: sample.endDate }));
+      const intervalsFor = (values: readonly number[]): Interval[] =>
+        samples
+          .filter((sample) => values.includes(sample.value as number))
+          .map((sample) => ({ start: sample.startDate, end: sample.endDate }));
+
+      const asleep = intervalsFor([...ASLEEP_VALUES]);
+
+      // Each stage is unioned independently, for the same reason the total is:
+      // two sources recording the same stretch must count it once.
+      const deepHours = totalCoveredHours(intervalsFor(STAGE_VALUES.deep));
+      const coreHours = totalCoveredHours(intervalsFor(STAGE_VALUES.core));
+      const remHours = totalCoveredHours(intervalsFor(STAGE_VALUES.rem));
+      const awakeHours = totalCoveredHours(intervalsFor(STAGE_VALUES.awake));
+
+      const hasStageDetail = deepHours + coreHours + remHours > 0;
 
       // Samples existed but none meant "asleep" (only inBed/awake). That is a
       // real measurement of zero sleep, not missing data.
-      return totalCoveredHours(asleep);
+      return {
+        totalHours: totalCoveredHours(asleep),
+        // Null rather than four zeroes when the source records no stages, so
+        // the UI can omit the breakdown instead of drawing an empty chart.
+        stages: hasStageDetail ? { deepHours, coreHours, remHours, awakeHours } : null,
+      };
     } catch (cause) {
       warnReadFailed('sleep', cause);
-      return null;
+      return { totalHours: null, stages: null };
     }
   }
 

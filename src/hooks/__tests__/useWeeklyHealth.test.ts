@@ -6,6 +6,8 @@ const day = (date: string, steps: number | null): DailyHealthMetrics => ({
   steps,
   activeEnergyKcal: null,
   sleepHours: null,
+  sleepStages: null,
+  restingHeartRate: null,
   lastRecordedAt: null,
 });
 

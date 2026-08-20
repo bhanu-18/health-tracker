@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { BarChart, type Bar } from '../../src/components/BarChart';
@@ -10,6 +11,7 @@ import { fromKg } from '../../src/lib/units';
 import { meanOf, useHistory, type HistoryRange } from '../../src/hooks/useHistory';
 import type { WorkoutSession } from '../../src/services/health';
 import { selectStepGoal, selectWeightUnit, useProfile } from '../../src/stores/profile';
+import { useSelectedDate } from '../../src/stores/selectedDate';
 import { radius, spacing, type MetricKey, type Theme } from '../../src/theme/tokens';
 import { useTheme, useThemedStyles } from '../../src/theme/useTheme';
 
@@ -31,7 +33,17 @@ const formatDuration = (minutes: number): string =>
 export default function HistoryScreen() {
   const theme = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const router = useRouter();
+  const setSelectedDate = useSelectedDate((s) => s.setDate);
   const [range, setRange] = useState<HistoryRange>('week');
+
+  /** Open a day on the dashboard, which can now show any date. */
+  const openDay = (index: number) => {
+    const day = days[index];
+    if (!day) return;
+    setSelectedDate(day.date);
+    router.push('/');
+  };
 
   const date = today();
   const { days, workouts, isLoading } = useHistory(date, range);
@@ -97,6 +109,7 @@ export default function HistoryScreen() {
               bars={stepBars}
               gradient={theme.metricGradients.steps}
               id="steps"
+              onSelect={openDay}
               goal={stepGoal}
               formatValue={(v) => Math.round(v).toLocaleString()}
             />
@@ -112,6 +125,7 @@ export default function HistoryScreen() {
               bars={sleepBars}
               gradient={theme.metricGradients.sleep}
               id="sleep"
+              onSelect={openDay}
               formatValue={(v) => `${v.toFixed(1)} hrs`}
             />
           </ChartCard>
@@ -128,6 +142,7 @@ export default function HistoryScreen() {
               bars={calorieBars}
               gradient={theme.metricGradients.food}
               id="calories"
+              onSelect={openDay}
               formatValue={(v) => Math.round(v).toLocaleString()}
             />
           </ChartCard>

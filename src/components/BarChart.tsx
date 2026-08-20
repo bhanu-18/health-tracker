@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Caption } from './Typography';
 import { spacing, type Theme } from '../theme/tokens';
@@ -19,6 +19,14 @@ type Props = {
   /** Dashed reference line, e.g. a daily goal. */
   goal?: number | null;
   formatValue?: (value: number) => string;
+  /**
+   * Called with a bar's index when tapped.
+   *
+   * Turns the chart from a picture into navigation: seeing an unusual day and
+   * wanting to know what happened on it is the obvious next question, and
+   * without this the answer means scrolling back through another screen.
+   */
+  onSelect?: (index: number) => void;
 };
 
 /**
@@ -32,7 +40,7 @@ type Props = {
  * A day with no data is an empty slot, never a zero-height bar. Drawing zero
  * would claim you took no steps on a day the watch was simply not worn.
  */
-export function BarChart({ bars, gradient, id, height = 160, goal, formatValue }: Props) {
+export function BarChart({ bars, gradient, id, height = 160, goal, formatValue, onSelect }: Props) {
   const theme = useTheme();
   const styles = useThemedStyles(makeStyles);
 
@@ -97,6 +105,23 @@ export function BarChart({ bars, gradient, id, height = 160, goal, formatValue }
         })}
       </Svg>
 
+      {/* Touch targets sit above the SVG rather than inside it: a bar can be
+          two pixels wide across a thirty-day range, which is untappable. Each
+          slot takes the full height and an equal share of the width instead. */}
+      {onSelect ? (
+        <View style={[StyleSheet.absoluteFill, styles.touchRow]} pointerEvents="box-none">
+          {bars.map((bar, index) => (
+            <Pressable
+              key={index}
+              onPress={() => onSelect(index)}
+              disabled={bar.value == null}
+              style={styles.touchSlot}
+              accessibilityLabel={bar.label ? `Open ${bar.label}` : undefined}
+            />
+          ))}
+        </View>
+      ) : null}
+
       <View style={styles.axis}>
         <Caption color={theme.colors.textFaint}>{bars[0]?.label ?? ''}</Caption>
         <Caption color={theme.colors.textFaint}>
@@ -111,6 +136,8 @@ export function BarChart({ bars, gradient, id, height = 160, goal, formatValue }
 const makeStyles = (_t: Theme) =>
   StyleSheet.create({
     empty: { alignItems: 'center', justifyContent: 'center' },
+    touchRow: { flexDirection: 'row' },
+    touchSlot: { flex: 1 },
     axis: {
       flexDirection: 'row',
       justifyContent: 'space-between',
