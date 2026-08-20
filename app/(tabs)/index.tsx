@@ -131,8 +131,13 @@ export default function TodayScreen() {
           budget is naturally circular, and it gives the number somewhere to
           live rather than floating above a line. */}
       <View style={styles.hero}>
+        {/* The arc shows what is LEFT, not what has been eaten -- matching the
+            label beneath the number. Filling as you ate meant an untouched day
+            rendered as an empty ring, which reads as a failed load rather than
+            a full budget. Over budget fills completely in the danger colour,
+            since an empty ring would again say nothing. */}
         <ProgressRing
-          progress={balance.progress}
+          progress={balance.isOverBudget ? 1 : 1 - balance.progress}
           gradient={
             balance.isOverBudget
               ? [theme.colors.danger, theme.colors.danger]
