@@ -91,6 +91,48 @@ describe('seed data', () => {
     expect(absolute / typo.calories).toBeGreaterThan(0.35);
   });
 
+  /**
+   * Conversion depends entirely on these fields, and a missing one is silent:
+   * the unit simply is not offered, so a user concludes the app cannot handle
+   * their ingredient rather than that the data is incomplete.
+   */
+  it('gives every ingredient at least one usable unit', () => {
+    const unusable = SEED_INGREDIENTS.filter((food) => {
+      const hasWeight = food.servingGrams != null && food.servingGrams > 0;
+      return !hasWeight && !food.isCountable;
+    }).map((food) => food.name);
+    expect(unusable).toEqual([]);
+  });
+
+  it('uses a plausible density wherever one is given', () => {
+    // Nothing edible is lighter than puffed air or denser than honey.
+    const implausible = SEED_INGREDIENTS.filter((food) => {
+      const density = food.densityGPerMl;
+      return density != null && (density < 0.2 || density > 1.6);
+    }).map((food) => `${food.name}: ${food.densityGPerMl}`);
+    expect(implausible).toEqual([]);
+  });
+
+  it('gives liquids and powders a density, so they can be spooned', () => {
+    // These are the ingredients people measure by volume rather than weigh.
+    // Without a density the volume units are withheld entirely.
+    const shouldHaveDensity = [
+      'ing-sunflower-oil',
+      'ing-milk-whole',
+      'ing-curd',
+      'ing-soy-sauce',
+      'ing-sugar',
+      'ing-atta',
+      'ing-basmati-raw',
+      'ing-turmeric',
+    ];
+    const missing = shouldHaveDensity.filter((id) => {
+      const food = SEED_INGREDIENTS.find((row) => row.id === id);
+      return food == null || food.densityGPerMl == null;
+    });
+    expect(missing).toEqual([]);
+  });
+
   it('ships enough ingredients for recipes to be usable', () => {
     // The original seed was prepared dishes only, which made the recipe feature
     // unusable -- you cannot build fried rice from a list of finished dishes.

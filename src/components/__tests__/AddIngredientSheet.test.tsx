@@ -30,6 +30,10 @@ jest.mock('../../db/repositories/foods', () => ({
       fatG: 0.9,
       source: 'seed',
       cuisine: 'Grain',
+      // Dry rice: a known density, so volume units are offered. Not countable,
+      // so "piece" is not.
+      densityGPerMl: 0.85,
+      isCountable: false,
       createdAt: 1,
     },
   ]),
@@ -66,6 +70,26 @@ describe('AddIngredientSheet', () => {
 
     // Not 100 cups of rice.
     await waitFor(() => expect(getByLabelText('Amount').props.value).toBe('1'));
+  });
+
+  // The reported bug, at the UI level: rice has no pieces, so the control that
+  // let a user ask for one should not exist.
+  it('does not offer pieces for a food that cannot be counted', async () => {
+    const { queryByText, getByText } = await selectBasmati();
+
+    expect(getByText('g')).toBeTruthy();
+    expect(getByText('cup')).toBeTruthy();
+    expect(queryByText('piece')).toBeNull();
+  });
+
+  it('converts a cup through density rather than calling it one serving', async () => {
+    const { getByText } = await selectBasmati();
+
+    fireEvent.press(getByText('cup'));
+
+    // 1 cup = 240 ml x 0.85 = 204 g of a 350 kcal/100 g food, so about 714.
+    // It previously read 350 -- the serving figure, regardless of the unit.
+    await waitFor(() => expect(getByText(/714 kcal/)).toBeTruthy());
   });
 
   it('passes the scaled nutrition up when confirmed', async () => {

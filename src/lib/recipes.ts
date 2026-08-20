@@ -9,35 +9,55 @@ import { emptyNutrition, type NutritionFacts } from './nutrition';
  */
 
 /**
- * How an ingredient's amount relates to its food's serving.
+ * The units an amount can be given in.
  *
- * Two genuinely different cases, and conflating them is the main way a recipe
- * total goes wrong:
+ * Three families, and each needs different information to be convertible:
  *
- *   - WEIGHT: "400 g chickpeas" against a food whose serving is 100 g means
- *     four servings. Requires the food to record its serving weight.
- *   - COUNT: "2 rotis" against a food whose serving is one roti means two
- *     servings. The unit is a description, not a measurement.
+ *   - MASS (g, kg) needs the food's serving weight.
+ *   - VOLUME (ml, tsp, tbsp, cup) needs its density. A volume is not a mass:
+ *     a cup of oil and a cup of flour weigh very differently.
+ *   - COUNT (piece) needs the food to be a discrete item at all.
  *
- * Volume (ml, cup, tbsp) is treated as a count of the food's stated serving,
- * because converting volume to mass needs a density this app does not store --
- * 150 ml of tomato puree and 150 ml of oil weigh very different amounts.
+ * Where the required information is missing, the unit is not offered and the
+ * conversion returns null. The previous version instead treated any non-mass
+ * amount as one whole serving, which reported a teaspoon of rice as 350 kcal --
+ * about thirty times over, stated with complete confidence.
  */
 export type IngredientUnit = 'g' | 'kg' | 'ml' | 'l' | 'tbsp' | 'tsp' | 'cup' | 'piece';
 
-/** Units that express mass, and their grams per unit. */
+/** Grams per unit, for mass units. */
 const MASS_UNITS: Partial<Record<IngredientUnit, number>> = {
   g: 1,
   kg: 1000,
 };
 
+/**
+ * Millilitres per unit, for volume units.
+ *
+ * Metric spoon and cup sizes, which is what Indian recipes and packaging use.
+ * US customary differs (a US cup is 237 ml, a US tbsp 14.8), but the gap is
+ * under 2% and far smaller than the variation in how a cup is filled.
+ */
+const VOLUME_UNITS: Partial<Record<IngredientUnit, number>> = {
+  ml: 1,
+  l: 1000,
+  tsp: 5,
+  tbsp: 15,
+  cup: 240,
+};
+
 export const isMassUnit = (unit: IngredientUnit): boolean => unit in MASS_UNITS;
+export const isVolumeUnit = (unit: IngredientUnit): boolean => unit in VOLUME_UNITS;
 
 export type IngredientSource = {
   /** Nutrition for one serving of the underlying food. */
   perServing: NutritionFacts;
-  /** Grams in one serving, when known. Required to scale by weight. */
+  /** Grams in one serving. Required for mass and volume amounts. */
   servingGrams: number | null;
+  /** Grams per millilitre. Required for volume amounts. */
+  densityGPerMl?: number | null;
+  /** Whether one serving is a discrete countable item. */
+  isCountable?: boolean;
   /** The food's own serving label, e.g. "1 medium". For messages only. */
   servingLabel?: string;
 };
@@ -48,27 +68,58 @@ export type IngredientAmount = {
 };
 
 /**
+ * Which units this food can actually be measured in.
+ *
+ * The UI offers exactly these. Showing a unit that cannot be converted is what
+ * produced "1 piece of rice" and "1 tsp = 350 kcal": the control implied the
+ * app understood the question, and it did not.
+ */
+export function supportedUnits(source: IngredientSource): IngredientUnit[] {
+  const units: IngredientUnit[] = [];
+
+  if (source.servingGrams != null && source.servingGrams > 0) {
+    units.push('g', 'kg');
+
+    // Volume needs a mass to convert into, so it needs the serving weight too.
+    if (source.densityGPerMl != null && source.densityGPerMl > 0) {
+      units.push('ml', 'tsp', 'tbsp', 'cup');
+    }
+  }
+
+  if (source.isCountable) units.push('piece');
+
+  return units;
+}
+
+/**
  * How many servings of a food an ingredient line represents.
  *
- * Returns null when it cannot be determined -- specifically, a weight amount
- * against a food with no recorded serving weight. Null is deliberate: guessing
- * would silently produce a wrong recipe total, and a recipe quietly wrong by
- * 40% is worse than one the app admits it cannot compute.
+ * Returns null when the amount cannot be converted, which the caller must
+ * surface rather than substitute. A recipe quietly wrong is worse than one the
+ * app admits it cannot compute, because only the second can be noticed.
  */
 export function servingsForIngredient(
   amount: IngredientAmount,
   source: IngredientSource,
 ): number | null {
+  if (!supportedUnits(source).includes(amount.unit)) return null;
   if (amount.quantity <= 0) return 0;
 
+  if (amount.unit === 'piece') return amount.quantity;
+
+  const servingGrams = source.servingGrams;
+  if (servingGrams == null || servingGrams <= 0) return null;
+
   if (isMassUnit(amount.unit)) {
-    if (source.servingGrams == null || source.servingGrams <= 0) return null;
-    const gramsPerUnit = MASS_UNITS[amount.unit] ?? 1;
-    return (amount.quantity * gramsPerUnit) / source.servingGrams;
+    const grams = amount.quantity * (MASS_UNITS[amount.unit] ?? 1);
+    return grams / servingGrams;
   }
 
-  // Count and volume units: the quantity is a multiple of the food's serving.
-  return amount.quantity;
+  const millilitres = amount.quantity * (VOLUME_UNITS[amount.unit] ?? 1);
+  const density = source.densityGPerMl;
+  if (density == null || density <= 0) return null;
+
+  return (millilitres * density) / servingGrams;
 }
 
 /** Nutrition contributed by one ingredient line, or null if it cannot be scaled. */
