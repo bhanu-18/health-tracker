@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@kingstinct/react-native-healthkit": "^14.0.2",
+    "babel-preset-expo": "~57.0.0",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "expo": "~57.0.14",
@@ -34,6 +35,7 @@
     "@types/react": "~19.2.2",
     "@typescript-eslint/eslint-plugin": "^8.67.0",
     "@typescript-eslint/parser": "^8.67.0",
+    "babel-plugin-inline-import": "^3.0.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^57.0.1",
