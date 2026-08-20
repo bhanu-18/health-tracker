@@ -132,6 +132,32 @@ export function scoreMatch(query: string, food: SearchableFood): number {
   return 0;
 }
 
+export type SortOrder = 'relevance' | 'calories' | 'proteinDensity';
+
+/**
+ * Protein per 100 kcal.
+ *
+ * The metric that matters when hitting a protein target inside a calorie
+ * budget, and it ranks very differently from raw protein: almonds carry 21 g
+ * per 100 g but at 579 kcal, while chicken breast has 31 g at 165 kcal. By
+ * absolute protein they look comparable; by density chicken is about six times
+ * better. Sorting by raw grams would put nuts near the top of a "high protein"
+ * list, which is true and useless.
+ *
+ * Returns 0 for zero-calorie foods rather than Infinity, so a spice with a
+ * trace of protein cannot head the list.
+ */
+export function proteinDensity(food: SearchableFood): number {
+  if (food.calories <= 0) return 0;
+  return (food.proteinG / food.calories) * 100;
+}
+
+const comparators: Record<SortOrder, (a: SearchableFood, b: SearchableFood) => number> = {
+  relevance: () => 0,
+  calories: (a, b) => a.calories - b.calories,
+  proteinDensity: (a, b) => proteinDensity(b) - proteinDensity(a),
+};
+
 /**
  * Rank foods for a query, applying filters and dropping non-matches.
  *
@@ -142,17 +168,27 @@ export function searchFoods<T extends SearchableFood>(
   foods: readonly T[],
   query: string,
   filters: SearchFilters = {},
+  sort: SortOrder = 'relevance',
 ): T[] {
   const trimmed = query.trim();
   const filtered = foods.filter((food) => matchesFilters(food, filters));
+  const compare = comparators[sort];
 
   if (trimmed.length === 0) {
-    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    return [...filtered].sort((a, b) => compare(a, b) || a.name.localeCompare(b.name));
   }
 
-  return filtered
-    .map((food) => ({ food, score: scoreMatch(trimmed, food) }))
-    .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score || a.food.name.localeCompare(b.food.name))
-    .map((entry) => entry.food);
+  return (
+    filtered
+      .map((food) => ({ food, score: scoreMatch(trimmed, food) }))
+      .filter((entry) => entry.score > 0)
+      // Relevance still wins while a query is active: someone who typed
+      // "paneer" wants paneer, not whichever match happens to be leanest.
+      // An explicit sort orders within equal relevance.
+      .sort(
+        (a, b) =>
+          b.score - a.score || compare(a.food, b.food) || a.food.name.localeCompare(b.food.name),
+      )
+      .map((entry) => entry.food)
+  );
 }

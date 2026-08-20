@@ -1,9 +1,10 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AddIngredientSheet, type NewIngredient } from '../../src/components/AddIngredientSheet';
 import { Button } from '../../src/components/Button';
 import { Screen } from '../../src/components/Screen';
+import { SwipeToDelete } from '../../src/components/SwipeToDelete';
 import { Body, Caption, Display, Heading, Title } from '../../src/components/Typography';
 import {
   addIngredient,
@@ -69,20 +70,17 @@ export default function RecipeDetailScreen() {
     await load();
   };
 
-  const handleRemove = (ingredientId: string, name: string) => {
-    Alert.alert('Remove ingredient', `Remove ${name} from this recipe?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            await removeIngredient(ingredientId);
-            await load();
-          })();
-        },
-      },
-    ]);
+  /**
+   * No confirmation dialog.
+   *
+   * The swipe already takes deliberate effort and can be abandoned mid-way, and
+   * removing an ingredient is trivially undone by adding it again -- a
+   * confirm step on a reversible action is friction that trains people to
+   * dismiss dialogs without reading them.
+   */
+  const handleRemove = async (ingredientId: string) => {
+    await removeIngredient(ingredientId);
+    await load();
   };
 
   const logOneServing = async () => {
@@ -139,23 +137,24 @@ export default function RecipeDetailScreen() {
         </Body>
       ) : (
         recipe.ingredients.map((ingredient) => (
-          <Pressable
+          <SwipeToDelete
             key={ingredient.id}
-            onLongPress={() => handleRemove(ingredient.id, ingredient.name)}
-            style={styles.ingredientRow}
-            accessibilityHint="Long press to remove"
+            label={`${ingredient.name}, ${Math.round(ingredient.calories)} kcal`}
+            onDelete={() => void handleRemove(ingredient.id)}
           >
-            <View style={styles.ingredientInfo}>
-              <Body>{ingredient.name}</Body>
-              <Caption style={styles.amount} color={colors.textFaint}>
-                {formatAmount({
-                  quantity: ingredient.quantity,
-                  unit: ingredient.unit as IngredientUnit,
-                })}
-              </Caption>
+            <View style={styles.ingredientRow}>
+              <View style={styles.ingredientInfo}>
+                <Body>{ingredient.name}</Body>
+                <Caption style={styles.amount} color={colors.textFaint}>
+                  {formatAmount({
+                    quantity: ingredient.quantity,
+                    unit: ingredient.unit as IngredientUnit,
+                  })}
+                </Caption>
+              </View>
+              <Body color={colors.textMuted}>{`${Math.round(ingredient.calories)} kcal`}</Body>
             </View>
-            <Body color={colors.textMuted}>{`${Math.round(ingredient.calories)} kcal`}</Body>
-          </Pressable>
+          </SwipeToDelete>
         ))
       )}
 
@@ -170,7 +169,7 @@ export default function RecipeDetailScreen() {
       ) : null}
 
       <Body style={styles.hint} color={colors.textFaint}>
-        Long press an ingredient to remove it. Totals recalculate automatically.
+        Swipe an ingredient left to remove it. Totals recalculate automatically.
       </Body>
 
       <AddIngredientSheet

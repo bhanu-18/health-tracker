@@ -133,6 +133,20 @@ describe('seed data', () => {
     expect(missing).toEqual([]);
   });
 
+  /**
+   * Cooking spray is labelled "0 calories" because US labelling permits
+   * rounding anything under 5 kcal per serving to zero, and the serving is a
+   * fraction-of-a-second spray. It is still oil. Recording it as 0 would put an
+   * invisible 30-60 kcal into every stir-fry.
+   */
+  it('does not record cooking spray as zero calories', () => {
+    const spray = SEED_INGREDIENTS.find((food) => food.id === 'ing-oil-spray');
+    expect(spray).toBeDefined();
+    expect(spray!.calories).toBeGreaterThan(0);
+    // Oil is about 9 kcal per gram, so a 1 g spray is about 9.
+    expect(spray!.calories).toBeCloseTo(9, 0);
+  });
+
   it('ships enough ingredients for recipes to be usable', () => {
     // The original seed was prepared dishes only, which made the recipe feature
     // unusable -- you cannot build fried rice from a list of finished dishes.
