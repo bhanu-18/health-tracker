@@ -1,24 +1,27 @@
-# Health & Wellness Tracker
+# Almanac
+
+_A record of what you do, day after day._
 
 Food, steps, sleep and weight in one daily view. Built for personal and family
 use first, with an accurate Indian recipe database as the core differentiator.
 
 ## Status
 
-Foundation complete. The Today dashboard renders against sample health data;
-food, weight and history are stubs with their remaining work listed on-screen.
+V1 complete and in daily use on an iPhone. All five screens work against real
+data; nothing is a stub.
 
-| Area                                                  | State                               |
-| ----------------------------------------------------- | ----------------------------------- |
-| Project setup, TypeScript strict, lint/format/test/CI | Done                                |
-| Design tokens and UI primitives                       | Done                                |
-| Nutrition and weight-trend logic (28 tests)           | Done                                |
-| Health provider interface + mock                      | Done                                |
-| Today dashboard                                       | Renders on sample data              |
-| Food, Weight, History screens                         | Stubs                               |
-| Real HealthKit reads                                  | Not started -- needs a dev build    |
-| SQLite persistence                                    | Not started                         |
-| Supabase sync                                         | Deferred until the local loop works |
+| Area                     | State                                                   |
+| ------------------------ | ------------------------------------------------------- |
+| Today                    | Real HealthKit steps and sleep, trends, comparisons     |
+| Food                     | Search, usual meals, sort, custom foods                 |
+| Weight                   | Entry, trend chart, kg/lb display                       |
+| Recipes                  | Library, ingredients, calculated per-serving nutrition  |
+| History                  | 7 and 30-day charts, workout sessions                   |
+| Food database            | 30 dishes + 108 raw ingredients, with densities         |
+| Appearance               | Light and dark, following the phone by default          |
+| Export                   | CSV of the whole log, via the share sheet               |
+| Supabase sync            | Not started -- the only backup today is that CSV export |
+| Android / Health Connect | Not started; the provider interface is ready for it     |
 
 ## Requirements
 

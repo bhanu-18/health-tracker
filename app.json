@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Health Tracker",
-    "slug": "health-tracker",
+    "name": "Almanac",
+    "slug": "almanac",
     "scheme": "healthtracker",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,7 @@
     "android": {
       "package": "com.bhanuteja.healthtracker",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1C1917",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
