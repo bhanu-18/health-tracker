@@ -2,14 +2,22 @@ import { StyleSheet, View } from 'react-native';
 import { Screen } from '../src/components/Screen';
 import { Body, Caption, Heading } from '../src/components/Typography';
 import { getHealthProvider, isUsingMockHealthData } from '../src/services/health';
-import { useProfile } from '../src/stores/profile';
+import {
+  selectCalorieTarget,
+  selectGoalWeightKg,
+  selectStepGoal,
+  selectWeightUnit,
+  useProfile,
+} from '../src/stores/profile';
+import { formatWeight } from '../src/lib/units';
 import { colors, radius, spacing } from '../src/theme/tokens';
 
 /** Settings -- health permissions and goals. */
 export default function SettingsScreen() {
-  const calorieTarget = useProfile((s) => s.calorieTarget);
-  const stepGoal = useProfile((s) => s.stepGoal);
-  const goalWeightKg = useProfile((s) => s.goalWeightKg);
+  const calorieTarget = useProfile(selectCalorieTarget);
+  const stepGoal = useProfile(selectStepGoal);
+  const goalWeightKg = useProfile(selectGoalWeightKg);
+  const weightUnit = useProfile(selectWeightUnit);
 
   return (
     <Screen>
@@ -26,7 +34,11 @@ export default function SettingsScreen() {
       <View style={styles.card}>
         <Row label="Daily calories" value={`${calorieTarget.toLocaleString()} kcal`} />
         <Row label="Daily steps" value={stepGoal.toLocaleString()} />
-        <Row label="Goal weight" value={goalWeightKg != null ? `${goalWeightKg} kg` : 'Not set'} />
+        <Row
+          label="Goal weight"
+          value={goalWeightKg != null ? formatWeight(goalWeightKg, weightUnit) : 'Not set'}
+        />
+        <Row label="Weight unit" value={weightUnit} />
       </View>
 
       <Body style={styles.note} color={colors.textMuted}>

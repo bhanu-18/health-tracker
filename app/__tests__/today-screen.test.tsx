@@ -45,6 +45,29 @@ jest.mock('react-native-safe-area-context', () => ({
  * store. Mocking the store instead would make the test pass by removing the
  * very thing under test.
  */
+jest.mock('../../src/db/repositories/weight', () => ({
+  getRecentWeightEntries: jest.fn(async () => [
+    { id: 'w1', date: '2026-08-05', kg: 83.2, source: 'manual', externalId: null, loggedAt: 1 },
+    { id: 'w2', date: '2026-08-18', kg: 82.5, source: 'manual', externalId: null, loggedAt: 2 },
+  ]),
+}));
+
+jest.mock('../../src/db/repositories/profile', () => ({
+  getProfile: jest.fn(async () => ({
+    id: 1,
+    dailyCalorieTarget: 2000,
+    dailyStepGoal: 10000,
+    sleepGoalHours: 8,
+    goalWeightKg: 75,
+    proteinTargetG: null,
+    carbsTargetG: null,
+    fatTargetG: null,
+    weightUnit: 'kg',
+    updatedAt: 1,
+  })),
+  updateProfile: jest.fn(),
+}));
+
 jest.mock('../../src/db/repositories/foodLog', () => ({
   getEntriesForDate: jest.fn(async () => [
     {

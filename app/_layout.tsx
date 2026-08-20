@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Body, Heading } from '../src/components/Typography';
 import { useMigrations } from '../src/db/migrate';
 import { seedFoodDatabase } from '../src/db/seed/run';
+import { useProfile } from '../src/stores/profile';
 import { colors, spacing } from '../src/theme/tokens';
 
 /**
@@ -20,16 +21,19 @@ import { colors, spacing } from '../src/theme/tokens';
 export default function RootLayout() {
   const { success, error } = useMigrations();
   const [seeded, setSeeded] = useState(false);
+  const loadProfile = useProfile((s) => s.load);
 
   useEffect(() => {
     if (!success) return;
     let cancelled = false;
 
-    seedFoodDatabase()
+    // Seed and profile load together: both are prerequisites for the first
+    // screen, and running them in parallel keeps the startup spinner short.
+    Promise.all([seedFoodDatabase(), loadProfile()])
       .catch((cause) => {
-        // A failed seed is not fatal -- the app works with an empty food
-        // library, and the user can still add their own foods.
-        console.warn('[db] seeding failed:', cause);
+        // Not fatal -- the app works with an empty food library and the
+        // profile defaults, and the user can still add their own foods.
+        console.warn('[db] startup load failed:', cause);
       })
       .finally(() => {
         if (!cancelled) setSeeded(true);
@@ -38,7 +42,7 @@ export default function RootLayout() {
     return () => {
       cancelled = true;
     };
-  }, [success]);
+  }, [success, loadProfile]);
 
   if (error) {
     return (

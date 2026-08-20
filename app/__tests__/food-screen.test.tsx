@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { findFoodCandidates } from '../../src/db/repositories/foods';
+import { getUsualMeals, recordUsualMealUse } from '../../src/db/repositories/usualMeals';
 import FoodScreen from '../(tabs)/food';
 
 /**
@@ -83,7 +84,12 @@ jest.mock('../../src/stores/foodLog', () => ({
 }));
 
 beforeEach(() => {
+  // Call history only -- clearing implementations too would leave the mocked
+  // repositories returning undefined and the screen rendering against no data.
   mockLogMeal.mockClear();
+  (getUsualMeals as jest.Mock).mockClear();
+  (recordUsualMealUse as jest.Mock).mockClear();
+  (findFoodCandidates as jest.Mock).mockClear();
 });
 
 describe('FoodScreen', () => {
@@ -109,6 +115,11 @@ describe('FoodScreen', () => {
       calories: 116,
       slot: 'breakfast',
     });
+
+    // Logging a usual bumps its use count and reloads the list; await that so
+    // the state update lands inside the test.
+    await waitFor(() => expect(recordUsualMealUse).toHaveBeenCalledWith('u1'));
+    await waitFor(() => expect(getUsualMeals).toHaveBeenCalledTimes(2));
   });
 
   it('filters results by the search query using the real ranking', async () => {
