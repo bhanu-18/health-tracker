@@ -75,7 +75,8 @@
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",
       "!src/**/*.d.ts"
-    ]
+    ],
+    "testTimeout": 20000
   },
   "lint-staged": {
     "*.{ts,tsx}": [

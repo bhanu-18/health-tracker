@@ -7,6 +7,21 @@
  */
 import '@testing-library/react-native';
 
+/**
+ * KNOWN GAP: React prints "the current testing environment is not configured to
+ * support act(...)" during screen tests.
+ *
+ * It is the environment-detection message, not "update not wrapped in act" --
+ * React is saying it cannot verify act coverage, not that an update escaped
+ * one. Setting IS_REACT_ACT_ENVIRONMENT from either setupFiles or
+ * setupFilesAfterEnv makes no difference; it comes from how jest-expo wires the
+ * React Native renderer.
+ *
+ * The practical cost is that leaked "state updated after the test finished"
+ * bugs will not be flagged automatically, so screen tests here await the async
+ * work they start rather than relying on that warning to catch it.
+ */
+
 // Reanimated ships its own Jest mock; without it, any component that animates
 // throws on import rather than rendering.
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factories are hoisted above imports, so require() is required here.
@@ -21,3 +36,24 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
  * reachable through an accessibility label instead.
  */
 jest.mock('@expo/vector-icons/Ionicons', () => 'Ionicons');
+
+/**
+ * A stub SQLite connection, so modules that import the database can be loaded.
+ *
+ * expo-sqlite is native and has no Node build, so importing src/db/client
+ * throws under Jest -- which takes down any screen that transitively touches a
+ * repository, even a screen the test never intended to exercise.
+ *
+ * This only makes the module importable. It executes no SQL, so tests that care
+ * about data still mock the specific repository functions they use, which keeps
+ * those mocks explicit and local rather than hidden in here.
+ */
+jest.mock('expo-sqlite', () => ({
+  openDatabaseSync: () => ({
+    execSync: jest.fn(),
+    runSync: jest.fn(),
+    getAllSync: jest.fn(() => []),
+    getFirstSync: jest.fn(() => null),
+    prepareSync: jest.fn(() => ({ executeSync: jest.fn(() => ({ getAllSync: () => [] })) })),
+  }),
+}));

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { ProgressBar } from '../../src/components/ProgressBar';
@@ -11,7 +11,16 @@ import { formatLongDate, greetingFor, today } from '../../src/lib/dates';
 import { calculateEnergyBalance } from '../../src/lib/nutrition';
 import { isUsingMockHealthData } from '../../src/services/health';
 import { totalsFor, useFoodLog } from '../../src/stores/foodLog';
-import { useProfile } from '../../src/stores/profile';
+import {
+  selectCalorieTarget,
+  selectStepGoal,
+  selectWeightUnit,
+  useProfile,
+} from '../../src/stores/profile';
+import { getRecentWeightEntries } from '../../src/db/repositories/weight';
+import { calculateWeightTrend } from '../../src/lib/weight';
+import { formatWeightDelta, fromKg } from '../../src/lib/units';
+import type { WeightEntryRow } from '../../src/db/schema';
 import { colors, metricColors, metricTints, radius, spacing } from '../../src/theme/tokens';
 
 /**
@@ -26,8 +35,8 @@ export default function TodayScreen() {
   const date = today();
 
   const { metrics, isLoading } = useDailyHealth(date);
-  const calorieTarget = useProfile((s) => s.calorieTarget);
-  const stepGoal = useProfile((s) => s.stepGoal);
+  const calorieTarget = useProfile(selectCalorieTarget);
+  const stepGoal = useProfile(selectStepGoal);
   // Select the raw array, then derive. A selector must return a stable
   // reference: Zustand compares results with Object.is, so a selector that
   // filters or reduces builds a new object every call, which reads as "changed"
@@ -40,6 +49,28 @@ export default function TodayScreen() {
   useEffect(() => {
     void loadForDate(date);
   }, [loadForDate, date]);
+
+  const weightUnit = useProfile(selectWeightUnit);
+  const [weightRows, setWeightRows] = useState<WeightEntryRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getRecentWeightEntries(30).then((rows) => {
+      if (!cancelled) setWeightRows(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const weightTrend = useMemo(
+    () =>
+      calculateWeightTrend(
+        weightRows.map((row) => ({ id: row.id, kg: row.kg, date: row.date })),
+        date,
+      ),
+    [weightRows, date],
+  );
 
   const balance = calculateEnergyBalance({
     target: calorieTarget,
@@ -111,7 +142,17 @@ export default function TodayScreen() {
           unit="kcal"
           detail="today"
         />
-        <StatCard label="Weight" metric="weight" value={null} unit="kg" detail="not logged" />
+        <StatCard
+          label="Weight"
+          metric="weight"
+          value={
+            weightTrend.latestKg == null
+              ? null
+              : fromKg(weightTrend.latestKg, weightUnit).toFixed(1)
+          }
+          unit={weightUnit}
+          detail={formatWeightDelta(weightTrend.deltaKg, weightUnit)}
+        />
       </View>
 
       <View style={styles.mealsSection}>
