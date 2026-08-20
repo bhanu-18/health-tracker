@@ -318,40 +318,10 @@ export const SEED_FOODS: NewFood[] = [
     cuisine: 'Indian',
   }),
 
-  // --- Dairy, sides and snacks ---------------------------------------------
-  seed({
-    id: 'seed-curd',
-    name: 'Curd (dahi), whole milk',
-    servingLabel: '1 cup (200 g)',
-    servingGrams: 200,
-    calories: 120,
-    proteinG: 7,
-    carbsG: 9,
-    fatG: 6.5,
-    cuisine: 'Indian',
-  }),
-  seed({
-    id: 'seed-paneer-raw',
-    name: 'Paneer, plain',
-    servingLabel: '50 g',
-    servingGrams: 50,
-    calories: 160,
-    proteinG: 9,
-    carbsG: 2,
-    fatG: 13,
-    cuisine: 'Indian',
-  }),
-  seed({
-    id: 'seed-ghee',
-    name: 'Ghee',
-    servingLabel: '1 tsp (5 g)',
-    servingGrams: 5,
-    calories: 45,
-    proteinG: 0,
-    carbsG: 0,
-    fatG: 5,
-    cuisine: 'Indian',
-  }),
+  // --- Sides and snacks ----------------------------------------------------
+  // Raw dairy (paneer, curd, ghee) lives in seed/ingredients.ts instead: those
+  // are things you cook with, not dishes you log, and duplicating them here
+  // put two "Ghee" entries in search.
   seed({
     id: 'seed-samosa',
     name: 'Samosa',
