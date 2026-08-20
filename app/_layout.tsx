@@ -89,6 +89,7 @@ export default function RootLayout() {
           <Stack.Screen name="recipes/index" options={{ headerShown: true, title: 'Recipes' }} />
           <Stack.Screen name="recipes/new" options={{ headerShown: true, title: 'New recipe' }} />
           <Stack.Screen name="recipes/[id]" options={{ headerShown: true, title: 'Recipe' }} />
+          <Stack.Screen name="foods/new" options={{ headerShown: true, title: 'New food' }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -235,6 +235,13 @@ export default function FoodScreen() {
           onPress={() => router.push('/recipes')}
         />
       </View>
+      <View style={styles.newFoodLink}>
+        <Button
+          label="Add a new food"
+          variant="secondary"
+          onPress={() => router.push('/foods/new')}
+        />
+      </View>
 
       <View style={styles.filterRow}>
         {CALORIE_FILTERS.map((filter, index) => (
@@ -304,11 +311,16 @@ export default function FoodScreen() {
             <Title style={styles.sectionTitle}>{query.length > 0 ? 'Results' : 'All foods'}</Title>
 
             {results.length === 0 ? (
-              <Body style={styles.empty} color={colors.textMuted}>
-                {query.length > 0
-                  ? `Nothing matches "${query}". Try a different spelling, or add it as a new food.`
-                  : 'No foods yet.'}
-              </Body>
+              <View style={styles.emptyState}>
+                <Body color={colors.textMuted}>
+                  {query.length > 0
+                    ? `Nothing matches "${query}". Try a different spelling, or add it yourself.`
+                    : 'No foods yet.'}
+                </Body>
+                <View style={styles.emptyAction}>
+                  <Button label="Add a new food" onPress={() => router.push('/foods/new')} />
+                </View>
+              </View>
             ) : (
               results.map((food) => (
                 <Pressable
@@ -356,6 +368,9 @@ export default function FoodScreen() {
 const styles = StyleSheet.create({
   searchWrap: { marginTop: spacing.lg },
   recipesLink: { marginTop: spacing.md },
+  newFoodLink: { marginTop: spacing.sm },
+  emptyState: { marginTop: spacing.md },
+  emptyAction: { marginTop: spacing.lg },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
