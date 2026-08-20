@@ -12,6 +12,13 @@ import { colors, metricColors, metricTints, radius, spacing } from '../theme/tok
 
 const UNITS: IngredientUnit[] = ['g', 'kg', 'ml', 'tbsp', 'tsp', 'cup', 'piece'];
 
+/**
+ * Generous, because the list is scrollable and a short cap is indistinguishable
+ * from "the database does not have it" -- which is precisely how this picker
+ * gave the impression of being nearly empty.
+ */
+const RESULT_LIMIT = 60;
+
 export type NewIngredient = {
   foodId: string | null;
   name: string;
@@ -54,8 +61,24 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
     };
   }, [visible]);
 
+  /**
+   * Browsing with no query shows raw ingredients first.
+   *
+   * This sheet exists to build recipes, and a recipe is made of ingredients --
+   * surfacing prepared dishes ahead of them (as an alphabetical list does) is
+   * why the picker felt empty of anything you could actually cook with.
+   */
   const results = useMemo(() => {
-    if (query.trim().length === 0) return foods.slice(0, 12);
+    if (query.trim().length === 0) {
+      const isIngredient = (food: Food) => food.id.startsWith('ing-');
+      return [...foods]
+        .sort((a, b) => {
+          const byKind = Number(isIngredient(b)) - Number(isIngredient(a));
+          return byKind !== 0 ? byKind : a.name.localeCompare(b.name);
+        })
+        .slice(0, RESULT_LIMIT);
+    }
+
     return searchFoods(
       foods.map((food) => ({
         id: food.id,
@@ -69,7 +92,7 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
       })),
       query,
     )
-      .slice(0, 12)
+      .slice(0, RESULT_LIMIT)
       .map((row) => row.food);
   }, [foods, query]);
 
@@ -179,6 +202,11 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
         ) : (
           <>
             <SearchField value={query} onChangeText={setQuery} placeholder="Search ingredients" />
+            {results.length === 0 ? (
+              <Body style={styles.noResults} color={colors.textMuted}>
+                {`Nothing matches "${query}". Try another spelling, or add it as a new food first.`}
+              </Body>
+            ) : null}
             <ScrollView style={styles.results} keyboardShouldPersistTaps="handled">
               {results.map((food) => (
                 <Pressable
@@ -193,7 +221,11 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
                   style={styles.resultRow}
                 >
                   <Body>{food.name}</Body>
-                  <Caption color={colors.textFaint}>{food.servingLabel}</Caption>
+                  <Caption color={colors.textFaint}>
+                    {`${food.servingLabel} · ${Math.round(food.calories)} kcal${
+                      food.cuisine ? ` · ${food.cuisine}` : ''
+                    }`}
+                  </Caption>
                 </Pressable>
               ))}
             </ScrollView>
@@ -219,7 +251,8 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
   },
   title: { fontSize: 22, marginBottom: spacing.lg },
-  results: { maxHeight: 280, marginTop: spacing.md },
+  results: { maxHeight: 340, marginTop: spacing.md },
+  noResults: { marginTop: spacing.lg, fontSize: 14 },
   resultRow: {
     paddingVertical: spacing.md,
     borderBottomWidth: 1,

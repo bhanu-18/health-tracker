@@ -11,9 +11,12 @@ import RecipeDetailScreen from '../recipes/[id]';
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: 'r1' }),
   useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
-  // Run the focus callback once, like a real focus event on mount.
+  // Run the focus callback once, like a real focus event on mount. The empty
+  // dependency array is deliberate -- re-running on every render would loop,
+  // and a single fire is what the real navigation event does here.
   useFocusEffect: (callback: () => void | (() => void)) => {
     const React = jest.requireActual('react');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useEffect(() => callback(), []);
   },
 }));
