@@ -23,7 +23,14 @@ type Props = {
  */
 export function Sparkline({ values, gradient, width = 72, height = 24 }: Props) {
   const present = values.filter((v): v is number => v != null);
-  if (present.length < 2) return <View style={{ width, height }} />;
+  /**
+   * Three points minimum.
+   *
+   * Two points draw a straight diagonal that reads as a stray mark rather than
+   * a trend -- it says nothing about direction that the number beside it does
+   * not, and it looked like a rendering artefact on the dashboard.
+   */
+  if (present.length < 3) return <View style={{ width, height }} />;
 
   const min = Math.min(...present);
   const max = Math.max(...present);

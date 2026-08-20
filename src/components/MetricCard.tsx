@@ -1,10 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Sparkline } from './Sparkline';
 import { Body, Caption } from './Typography';
 import { radius, spacing, type MetricKey, type Theme } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/useTheme';
+
+const BADGE_SIZE = 28;
 
 type Props = {
   label: string;
@@ -33,30 +36,59 @@ export function MetricCard({ label, value, unit, metric, icon, history, detail }
   const gradient = theme.metricGradients[metric];
   const hasValue = value != null;
 
+  /**
+   * Measured rather than sized with percentages.
+   *
+   * react-native-svg does not resolve a percentage width against a flex parent
+   * reliably: the gradient rendered at some default size and stopped partway
+   * across the card, leaving a hard vertical seam with plain background beyond
+   * it. Explicit pixels are the only dependable way to fill the card.
+   */
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const onLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setSize((current) =>
+      current?.width === width && current?.height === height ? current : { width, height },
+    );
+  };
+
   return (
-    <View style={styles.card}>
-      {/* The gradient is drawn as SVG rather than with a native gradient
-          module, so this needed no rebuild to try. */}
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-        <Defs>
-          <LinearGradient id={`card-${metric}`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={gradient[0]} stopOpacity={theme.isDark ? 0.22 : 0.14} />
-            <Stop offset="1" stopColor={gradient[1]} stopOpacity={theme.isDark ? 0.08 : 0.04} />
-          </LinearGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill={`url(#card-${metric})`} rx={radius.lg} />
-      </Svg>
+    <View style={styles.card} onLayout={onLayout}>
+      {/* Drawn as SVG rather than with a native gradient module, so this needed
+          no rebuild to try. Rendered only once the card has been measured. */}
+      {size ? (
+        <Svg style={StyleSheet.absoluteFill} width={size.width} height={size.height}>
+          <Defs>
+            <LinearGradient id={`card-${metric}`} x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={gradient[0]} stopOpacity={theme.isDark ? 0.22 : 0.14} />
+              <Stop offset="1" stopColor={gradient[1]} stopOpacity={theme.isDark ? 0.08 : 0.04} />
+            </LinearGradient>
+          </Defs>
+          <Rect
+            width={size.width}
+            height={size.height}
+            fill={`url(#card-${metric})`}
+            rx={radius.lg}
+          />
+        </Svg>
+      ) : null}
 
       <View style={styles.headerRow}>
         <View style={styles.badge}>
-          <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+          {/* Fixed size, so no measurement needed. */}
+          <Svg style={StyleSheet.absoluteFill} width={BADGE_SIZE} height={BADGE_SIZE}>
             <Defs>
               <LinearGradient id={`badge-${metric}`} x1="0" y1="0" x2="1" y2="1">
                 <Stop offset="0" stopColor={gradient[0]} />
                 <Stop offset="1" stopColor={gradient[1]} />
               </LinearGradient>
             </Defs>
-            <Rect width="100%" height="100%" fill={`url(#badge-${metric})`} rx={999} />
+            <Rect
+              width={BADGE_SIZE}
+              height={BADGE_SIZE}
+              fill={`url(#badge-${metric})`}
+              rx={BADGE_SIZE / 2}
+            />
           </Svg>
           <Ionicons name={icon} size={15} color="#FFFFFF" />
         </View>
@@ -98,8 +130,8 @@ const makeStyles = (t: Theme) =>
       marginBottom: spacing.sm,
     },
     badge: {
-      width: 28,
-      height: 28,
+      width: BADGE_SIZE,
+      height: BADGE_SIZE,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
