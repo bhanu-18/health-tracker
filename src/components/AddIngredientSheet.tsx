@@ -11,12 +11,13 @@ import { searchFoods } from '../lib/foodSearch';
 import {
   formatAmount,
   isMassUnit,
+  isVolumeUnit,
   nutritionForIngredient,
+  supportedUnits,
+  type IngredientSource,
   type IngredientUnit,
 } from '../lib/recipes';
 import { colors, metricColors, metricTints, radius, spacing } from '../theme/tokens';
-
-const UNITS: IngredientUnit[] = ['g', 'kg', 'ml', 'tbsp', 'tsp', 'cup', 'piece'];
 
 /**
  * Generous, because the list is scrollable and a short cap is indistinguishable
@@ -104,22 +105,39 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
 
   const parsedQuantity = Number.parseFloat(quantity);
 
+  /** The food as the conversion maths sees it. */
+  const source: IngredientSource | null = useMemo(
+    () =>
+      selected
+        ? {
+            perServing: {
+              calories: selected.calories,
+              protein: selected.proteinG,
+              carbs: selected.carbsG,
+              fat: selected.fatG,
+            },
+            servingGrams: selected.servingGrams,
+            densityGPerMl: selected.densityGPerMl,
+            isCountable: selected.isCountable,
+            servingLabel: selected.servingLabel,
+          }
+        : null,
+    [selected],
+  );
+
+  /**
+   * Only the units this food can actually be measured in.
+   *
+   * Offering every unit to every food is what produced "1 piece of rice" and a
+   * teaspoon costed as a full serving. A control that accepts a question the
+   * app cannot answer is worse than one that is not there.
+   */
+  const units = useMemo(() => (source ? supportedUnits(source) : []), [source]);
+
   const preview = useMemo(() => {
-    if (!selected || !Number.isFinite(parsedQuantity)) return null;
-    return nutritionForIngredient(
-      { quantity: parsedQuantity, unit },
-      {
-        perServing: {
-          calories: selected.calories,
-          protein: selected.proteinG,
-          carbs: selected.carbsG,
-          fat: selected.fatG,
-        },
-        servingGrams: selected.servingGrams,
-        servingLabel: selected.servingLabel,
-      },
-    );
-  }, [selected, parsedQuantity, unit]);
+    if (!source || !Number.isFinite(parsedQuantity)) return null;
+    return nutritionForIngredient({ quantity: parsedQuantity, unit }, source);
+  }, [source, parsedQuantity, unit]);
 
   const reset = () => {
     setQuery('');
@@ -213,7 +231,7 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
 
             <Caption style={styles.unitsLabel}>Unit</Caption>
             <View style={styles.unitRow}>
-              {UNITS.map((option) => (
+              {units.map((option) => (
                 <Pressable
                   key={option}
                   onPress={() => changeUnit(option)}
@@ -235,11 +253,10 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
                   </Caption>
                 </>
               ) : (
-                /* The honest failure: a weight given for a food with no recorded
-                   serving weight cannot be converted, so the app says so
-                   instead of inventing a number. */
+                /* The honest failure. Reached only for a malformed amount now
+                   that unsupported units are not offered at all. */
                 <Body style={styles.warning} color={colors.danger}>
-                  {`"${selected.name}" has no recorded weight per serving, so an amount in ${unit} cannot be converted. Use ${selected.servingLabel.includes('g') ? 'grams' : 'piece or cup'} instead.`}
+                  {`Enter an amount in ${units.join(', ') || 'a supported unit'}.`}
                 </Body>
               )}
             </View>
@@ -267,10 +284,16 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
                   key={food.id}
                   onPress={() => {
                     setSelected(food);
-                    // Default to the unit the food is actually measured in, so
-                    // the common case needs no further tapping.
-                    setUnit(food.servingGrams != null ? 'g' : 'piece');
-                    setQuantity(food.servingGrams != null ? String(food.servingGrams) : '1');
+                    // Default to a unit the food actually supports: grams when
+                    // it has a weight, otherwise pieces. Never one it cannot
+                    // convert.
+                    if (food.servingGrams != null && food.servingGrams > 0) {
+                      setUnit('g');
+                      setQuantity(String(food.servingGrams));
+                    } else {
+                      setUnit('piece');
+                      setQuantity('1');
+                    }
                   }}
                   style={styles.resultRow}
                 >

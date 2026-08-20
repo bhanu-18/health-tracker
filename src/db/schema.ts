@@ -56,6 +56,28 @@ export const foods = sqliteTable(
     /** Grams in one serving. Null when a food has no meaningful weight. */
     servingGrams: real('serving_grams'),
 
+    /**
+     * Grams per millilitre. Null when unknown.
+     *
+     * The only honest way to convert a volume into nutrition. Without it, "1
+     * tsp of rice" cannot be costed at all -- and the previous behaviour of
+     * treating a spoonful as one whole serving reported 350 kcal for a
+     * teaspoon of rice, which is roughly thirty times over.
+     *
+     * Null is not a gap to paper over: where it is null, volume units are not
+     * offered, because refusing to answer beats answering wrongly.
+     */
+    densityGPerMl: real('density_g_per_ml'),
+
+    /**
+     * Whether one serving is a discrete countable item -- an egg, a roti, a
+     * medium onion.
+     *
+     * Rice is not countable, so offering "1 piece of rice" invites a number
+     * that means nothing. Only countable foods accept the piece unit.
+     */
+    isCountable: integer('is_countable', { mode: 'boolean' }).notNull().default(false),
+
     calories: real('calories').notNull(),
     proteinG: real('protein_g').notNull().default(0),
     carbsG: real('carbs_g').notNull().default(0),

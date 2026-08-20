@@ -2,37 +2,110 @@ import {
   calculateRecipeTotals,
   formatAmount,
   isMassUnit,
+  isVolumeUnit,
   nutritionForIngredient,
   servingsForIngredient,
+  supportedUnits,
   type IngredientSource,
 } from '../recipes';
 
-/** Chickpeas: nutrition stated per 100 g. */
+/** Chickpeas: nutrition stated per 100 g, dry, so a known density. */
 const chickpeas: IngredientSource = {
   perServing: { calories: 164, protein: 8.9, carbs: 27.4, fat: 2.6 },
   servingGrams: 100,
+  densityGPerMl: 0.85,
+  isCountable: false,
 };
 
-/** Roti: nutrition stated per piece, with a known weight. */
+/** Basmati rice: the food from the bug report. 350 kcal per 100 g dry. */
+const basmati: IngredientSource = {
+  perServing: { calories: 350, protein: 7.5, carbs: 78, fat: 0.9 },
+  servingGrams: 100,
+  densityGPerMl: 0.85,
+  isCountable: false,
+  servingLabel: '100 g',
+};
+
+/** Roti: nutrition stated per piece, with a known weight. Countable. */
 const roti: IngredientSource = {
   perServing: { calories: 120, protein: 3, carbs: 23, fat: 2 },
   servingGrams: 40,
+  isCountable: true,
   servingLabel: '1 medium',
 };
 
-/** Onion: stated per medium onion, weight unknown. */
+/** Onion: countable, but no recorded weight and no density. */
 const onion: IngredientSource = {
   perServing: { calories: 44, protein: 1.2, carbs: 10.3, fat: 0.1 },
   servingGrams: null,
+  isCountable: true,
   servingLabel: '1 medium',
 };
 
-describe('isMassUnit', () => {
-  it('recognises mass units only', () => {
+describe('unit families', () => {
+  it('separates mass from volume from count', () => {
     expect(isMassUnit('g')).toBe(true);
     expect(isMassUnit('kg')).toBe(true);
     expect(isMassUnit('ml')).toBe(false);
-    expect(isMassUnit('piece')).toBe(false);
+    expect(isVolumeUnit('ml')).toBe(true);
+    expect(isVolumeUnit('cup')).toBe(true);
+    expect(isVolumeUnit('g')).toBe(false);
+    expect(isVolumeUnit('piece')).toBe(false);
+  });
+});
+
+describe('supportedUnits', () => {
+  it('offers mass and volume for a weighed food with a known density', () => {
+    expect(supportedUnits(basmati)).toEqual(['g', 'kg', 'ml', 'tsp', 'tbsp', 'cup']);
+  });
+
+  // The bug, stated as a rule: rice is not countable.
+  it('does not offer pieces for something that cannot be counted', () => {
+    expect(supportedUnits(basmati)).not.toContain('piece');
+  });
+
+  it('offers pieces for a countable food', () => {
+    expect(supportedUnits(roti)).toContain('piece');
+  });
+
+  it('withholds volume when the density is unknown', () => {
+    const noDensity: IngredientSource = { ...basmati, densityGPerMl: null };
+    expect(supportedUnits(noDensity)).toEqual(['g', 'kg']);
+  });
+
+  it('offers only pieces when the weight is unknown', () => {
+    expect(supportedUnits(onion)).toEqual(['piece']);
+  });
+});
+
+/**
+ * These assert the exact numbers the app displayed before density existed.
+ * Every one was shown to the user with full confidence.
+ */
+describe('the reported wrong values', () => {
+  it('costs a teaspoon of rice as a teaspoon, not a whole serving', () => {
+    // Was 350 kcal. 1 tsp = 5 ml x 0.85 = 4.25 g, about 15 kcal.
+    const result = nutritionForIngredient({ quantity: 1, unit: 'tsp' }, basmati);
+    expect(result!.calories).toBeCloseTo(14.9, 0);
+    expect(result!.calories).toBeLessThan(20);
+  });
+
+  it('costs a cup of rice as a cup, not a whole serving', () => {
+    // Was 350 kcal. 1 cup = 240 ml x 0.85 = 204 g, about 714 kcal.
+    const result = nutritionForIngredient({ quantity: 1, unit: 'cup' }, basmati);
+    expect(result!.calories).toBeCloseTo(714, 0);
+  });
+
+  it('refuses a piece of rice rather than costing it as a serving', () => {
+    // Was 350 kcal for "1 piece" of a food that has no pieces.
+    expect(servingsForIngredient({ quantity: 1, unit: 'piece' }, basmati)).toBeNull();
+  });
+
+  it('does not report 100 ml of rice as 35,000 kcal', () => {
+    // Was 100 servings. 100 ml x 0.85 = 85 g, about 298 kcal.
+    const result = nutritionForIngredient({ quantity: 100, unit: 'ml' }, basmati);
+    expect(result!.calories).toBeCloseTo(297.5, 0);
+    expect(result!.calories).toBeLessThan(400);
   });
 });
 
@@ -50,6 +123,17 @@ describe('servingsForIngredient', () => {
     expect(servingsForIngredient({ quantity: 2, unit: 'piece' }, roti)).toBe(2);
   });
 
+  it('converts a volume through density, not by pretending it is a serving', () => {
+    // 1 tbsp = 15 ml x 0.85 = 12.75 g, against a 100 g serving.
+    expect(servingsForIngredient({ quantity: 1, unit: 'tbsp' }, chickpeas)).toBeCloseTo(0.1275, 4);
+  });
+
+  it('scales volume linearly', () => {
+    const one = servingsForIngredient({ quantity: 1, unit: 'cup' }, chickpeas)!;
+    const two = servingsForIngredient({ quantity: 2, unit: 'cup' }, chickpeas)!;
+    expect(two).toBeCloseTo(one * 2, 6);
+  });
+
   // The case that would otherwise silently corrupt a recipe: a weight given
   // for a food whose serving weight is unknown cannot be scaled at all.
   it('refuses to guess a weight when the serving weight is unknown', () => {
@@ -60,14 +144,18 @@ describe('servingsForIngredient', () => {
     expect(servingsForIngredient({ quantity: 2, unit: 'piece' }, onion)).toBe(2);
   });
 
-  it('treats volume as a multiple of the serving, not a mass', () => {
-    // Converting ml to grams would need a density this app does not store.
-    expect(servingsForIngredient({ quantity: 1.5, unit: 'cup' }, onion)).toBe(1.5);
+  it('refuses a volume when the density is unknown', () => {
+    // Previously returned 1.5 servings, silently treating a cup as a serving.
+    expect(servingsForIngredient({ quantity: 1.5, unit: 'cup' }, onion)).toBeNull();
   });
 
   it('returns zero for a zero or negative amount', () => {
     expect(servingsForIngredient({ quantity: 0, unit: 'g' }, chickpeas)).toBe(0);
     expect(servingsForIngredient({ quantity: -5, unit: 'g' }, chickpeas)).toBe(0);
+  });
+
+  it('refuses a unit the food does not support at all', () => {
+    expect(servingsForIngredient({ quantity: 1, unit: 'piece' }, chickpeas)).toBeNull();
   });
 });
 
