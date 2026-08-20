@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AnimatedNumber } from '../../src/components/AnimatedNumber';
 import { Button } from '../../src/components/Button';
+import { EditMealSheet } from '../../src/components/EditMealSheet';
+import { SwipeToDelete } from '../../src/components/SwipeToDelete';
+import { Toast } from '../../src/components/Toast';
 import { MetricCard } from '../../src/components/MetricCard';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { Screen } from '../../src/components/Screen';
 import { Body, Caption, Heading, Title } from '../../src/components/Typography';
 import { getRecentWeightEntries } from '../../src/db/repositories/weight';
-import type { WeightEntryRow } from '../../src/db/schema';
+import type { FoodLogEntry, WeightEntryRow } from '../../src/db/schema';
 import { useDailyHealth } from '../../src/hooks/useDailyHealth';
 import { averageOf, useWeeklyHealth } from '../../src/hooks/useWeeklyHealth';
 import { formatLongDate, greetingFor, today } from '../../src/lib/dates';
@@ -65,6 +68,11 @@ export default function TodayScreen() {
 
   const entries = useFoodLog((s) => s.entries);
   const loadForDate = useFoodLog((s) => s.loadForDate);
+  const removeEntry = useFoodLog((s) => s.removeEntry);
+  const setServings = useFoodLog((s) => s.setServings);
+
+  const [editing, setEditing] = useState<FoodLogEntry | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const totals = useMemo(() => totalsFor(entries), [entries]);
 
   useEffect(() => {
@@ -245,24 +253,54 @@ export default function TodayScreen() {
         ) : (
           <View style={styles.mealList}>
             {entries.map((entry) => (
-              <View key={entry.id} style={styles.mealRow}>
-                <View style={styles.mealInfo}>
-                  <Body>{entry.name}</Body>
-                  <Caption style={styles.mealMeta}>
-                    {entry.slot}
-                    {entry.servings !== 1 ? ` · ${entry.servings} servings` : ''}
-                  </Caption>
-                </View>
-                <Body style={styles.mealCalories} color={theme.metricColors.food}>
-                  {`${entry.calories}`}
-                </Body>
-              </View>
+              <SwipeToDelete
+                key={entry.id}
+                label={`${entry.name}, ${entry.calories} kcal`}
+                onDelete={() => {
+                  void removeEntry(entry.id);
+                  setToast(`Removed ${entry.name}`);
+                }}
+              >
+                {/* Tap to correct a portion, swipe to remove. The log was
+                    append-only until now: one mistap was permanent. */}
+                <Pressable onPress={() => setEditing(entry)} style={styles.mealRow}>
+                  <View style={styles.mealInfo}>
+                    <Body>{entry.name}</Body>
+                    <Caption style={styles.mealMeta}>
+                      {entry.slot}
+                      {entry.servings !== 1 ? ` · ${entry.servings} servings` : ''}
+                    </Caption>
+                  </View>
+                  <Body style={styles.mealCalories} color={theme.metricColors.food}>
+                    {`${entry.calories}`}
+                  </Body>
+                </Pressable>
+              </SwipeToDelete>
             ))}
           </View>
         )}
       </View>
 
       <Button label="Log a meal" onPress={() => router.push('/food')} />
+
+      <EditMealSheet
+        entry={editing}
+        onCancel={() => setEditing(null)}
+        onSave={(servings) => {
+          if (editing) void setServings(editing.id, servings);
+          setEditing(null);
+          setToast('Portion updated');
+        }}
+        onDelete={() => {
+          if (editing) {
+            void removeEntry(editing.id);
+            setToast(`Removed ${editing.name}`);
+          }
+          setEditing(null);
+        }}
+      />
+
+      <Toast message={toast} onDismiss={() => setToast(null)} />
     </Screen>
   );
 }
