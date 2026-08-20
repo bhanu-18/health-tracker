@@ -1,7 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Button } from '../src/components/Button';
+import { FormField } from '../src/components/FormField';
 import { Screen } from '../src/components/Screen';
 import { Body, Caption, Heading } from '../src/components/Typography';
 import { getHealthProvider, isUsingMockHealthData } from '../src/services/health';
+import { fromKg, toKg, type WeightUnit } from '../src/lib/units';
 import {
   selectCalorieTarget,
   selectGoalWeightKg,
@@ -9,15 +13,92 @@ import {
   selectWeightUnit,
   useProfile,
 } from '../src/stores/profile';
-import { formatWeight } from '../src/lib/units';
 import { colors, radius, spacing } from '../src/theme/tokens';
 
-/** Settings -- health permissions and goals. */
+const parse = (value: string): number => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+/**
+ * Settings: health source and the goals every other screen reads.
+ *
+ * These were previously display-only, which meant the dashboard's headline
+ * figure was a hardcoded 2,000 kcal for everyone. Not a cosmetic gap: if the
+ * real target is 1,800, every "calories remaining" the app has ever shown was
+ * wrong by 200, with no way to correct it.
+ */
 export default function SettingsScreen() {
   const calorieTarget = useProfile(selectCalorieTarget);
   const stepGoal = useProfile(selectStepGoal);
   const goalWeightKg = useProfile(selectGoalWeightKg);
   const weightUnit = useProfile(selectWeightUnit);
+  const updateProfile = useProfile((s) => s.update);
+
+  const [calories, setCalories] = useState(String(calorieTarget));
+  const [steps, setSteps] = useState(String(stepGoal));
+  const [goalWeight, setGoalWeight] = useState(
+    goalWeightKg != null ? fromKg(goalWeightKg, weightUnit).toFixed(1) : '',
+  );
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Re-seed the goal weight when the display unit changes.
+   *
+   * Adjusted during render rather than in an effect. React re-runs this
+   * component immediately without painting the intermediate state, so there is
+   * no flash of the old number and no extra render pass -- which is what the
+   * set-state-in-effect rule exists to prevent.
+   *
+   * Only the unit needs this: the profile is loaded before any screen mounts,
+   * so the other fields' initial state is already correct.
+   */
+  const [seededUnit, setSeededUnit] = useState(weightUnit);
+  if (seededUnit !== weightUnit) {
+    setSeededUnit(weightUnit);
+    setGoalWeight(goalWeightKg != null ? fromKg(goalWeightKg, weightUnit).toFixed(1) : '');
+  }
+
+  const changeUnit = async (next: WeightUnit) => {
+    if (next === weightUnit) return;
+    // Only the display unit changes. Stored weights stay in kilograms, so
+    // nothing is converted and no history is touched.
+    await updateProfile({ weightUnit: next });
+  };
+
+  const save = async () => {
+    const calorieValue = Math.round(parse(calories));
+    const stepValue = Math.round(parse(steps));
+
+    if (calorieValue <= 0) {
+      setError('Enter a daily calorie target.');
+      return;
+    }
+    if (stepValue <= 0) {
+      setError('Enter a daily step goal.');
+      return;
+    }
+
+    const goalValue = goalWeight.trim().length > 0 ? parse(goalWeight) : null;
+    if (goalValue != null && goalValue <= 0) {
+      setError('Enter a goal weight, or leave it blank.');
+      return;
+    }
+
+    setError(null);
+    try {
+      await updateProfile({
+        dailyCalorieTarget: calorieValue,
+        dailyStepGoal: stepValue,
+        // Converted at the edge: storage is always kilograms.
+        goalWeightKg: goalValue != null ? toKg(goalValue, weightUnit) : null,
+      });
+      setStatus('Saved');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save your settings.');
+    }
+  };
 
   return (
     <Screen>
@@ -30,20 +111,62 @@ export default function SettingsScreen() {
         />
       </View>
 
-      <Heading style={styles.section}>Goals</Heading>
-      <View style={styles.card}>
-        <Row label="Daily calories" value={`${calorieTarget.toLocaleString()} kcal`} />
-        <Row label="Daily steps" value={stepGoal.toLocaleString()} />
-        <Row
-          label="Goal weight"
-          value={goalWeightKg != null ? formatWeight(goalWeightKg, weightUnit) : 'Not set'}
+      <Heading style={styles.section}>Daily goals</Heading>
+      <View style={styles.form}>
+        <FormField
+          label="Daily calories"
+          value={calories}
+          onChangeText={setCalories}
+          keyboardType="number-pad"
+          suffix="kcal"
         />
-        <Row label="Weight unit" value={weightUnit} />
+        <FormField
+          label="Daily steps"
+          value={steps}
+          onChangeText={setSteps}
+          keyboardType="number-pad"
+          suffix="steps"
+        />
+        <FormField
+          label="Goal weight"
+          value={goalWeight}
+          onChangeText={setGoalWeight}
+          keyboardType="decimal-pad"
+          suffix={weightUnit}
+          placeholder="Optional"
+        />
       </View>
 
-      <Body style={styles.note} color={colors.textMuted}>
-        Editing these values is not wired up yet.
+      <Caption style={styles.unitLabel}>Weight unit</Caption>
+      <View style={styles.unitRow}>
+        {(['kg', 'lb'] as WeightUnit[]).map((option) => (
+          <Pressable
+            key={option}
+            onPress={() => void changeUnit(option)}
+            style={[styles.chip, weightUnit === option && styles.chipSelected]}
+            accessibilityLabel={`Show weight in ${option}`}
+          >
+            <Body color={weightUnit === option ? colors.primaryText : colors.text}>{option}</Body>
+          </Pressable>
+        ))}
+      </View>
+      <Body style={styles.unitHint} color={colors.textFaint}>
+        Display only. Weights are stored in kilograms, so switching converts nothing and changes no
+        history.
       </Body>
+
+      {error ? (
+        <Body style={styles.error} color={colors.danger}>
+          {error}
+        </Body>
+      ) : null}
+      {status && !error ? (
+        <Body style={styles.status} color={colors.success}>
+          {status}
+        </Body>
+      ) : null}
+
+      <Button label="Save goals" onPress={() => void save()} />
     </Screen>
   );
 }
@@ -68,6 +191,20 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   section: { marginTop: spacing.xl },
+  form: { gap: spacing.lg, marginTop: spacing.md },
   row: { gap: spacing.xs },
-  note: { marginTop: spacing.xl, fontSize: 14 },
+  unitLabel: { marginTop: spacing.xl, marginBottom: spacing.sm },
+  unitRow: { flexDirection: 'row', gap: spacing.sm },
+  chip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  unitHint: { fontSize: 13, marginTop: spacing.sm, marginBottom: spacing.xl },
+  error: { marginBottom: spacing.md, fontSize: 14 },
+  status: { marginBottom: spacing.md, fontSize: 14 },
 });
