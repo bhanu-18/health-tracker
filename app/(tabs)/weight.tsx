@@ -10,7 +10,9 @@ import { today } from '../../src/lib/dates';
 import { calculateWeightTrend, daysBetween } from '../../src/lib/weight';
 import { defaultEntryValue, formatWeightDelta, fromKg, toKg } from '../../src/lib/units';
 import { selectGoalWeightKg, selectWeightUnit, useProfile } from '../../src/stores/profile';
-import { colors, metricColors, radius, spacing } from '../../src/theme/tokens';
+import { radius, spacing } from '../../src/theme/tokens';
+import type { Theme } from '../../src/theme/tokens';
+import { useTheme, useThemedStyles } from '../../src/theme/useTheme';
 
 /**
  * Screen 3 -- Weight.
@@ -21,6 +23,8 @@ import { colors, metricColors, radius, spacing } from '../../src/theme/tokens';
  * drank, and reads as progress or failure that is not real.
  */
 export default function WeightScreen() {
+  const { colors, metricColors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const unit = useProfile(selectWeightUnit);
   const goalWeightKg = useProfile(selectGoalWeightKg);
   const updateProfile = useProfile((s) => s.update);
@@ -155,43 +159,44 @@ export default function WeightScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  unitLabel: { fontWeight: '500', marginTop: spacing.xs },
-  trend: { marginTop: spacing.sm },
-  card: {
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-  },
-  sectionHeading: { fontSize: 20, marginTop: spacing.xl, marginBottom: spacing.md },
-  entryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  input: {
-    flex: 1,
-    fontSize: 28,
-    color: colors.text,
-    padding: 0,
-    minHeight: 36,
-  },
-  inputUnit: { textTransform: 'none', letterSpacing: 0 },
-  error: { marginBottom: spacing.md, fontSize: 14 },
-  note: { marginTop: spacing.lg, fontSize: 13 },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    unitLabel: { fontWeight: '500', marginTop: spacing.xs },
+    trend: { marginTop: spacing.sm },
+    card: {
+      marginTop: spacing.xl,
+      padding: spacing.lg,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+    },
+    sectionHeading: { fontSize: 20, marginTop: spacing.xl, marginBottom: spacing.md },
+    entryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    input: {
+      flex: 1,
+      fontSize: 28,
+      color: t.colors.text,
+      padding: 0,
+      minHeight: 36,
+    },
+    inputUnit: { textTransform: 'none', letterSpacing: 0 },
+    error: { marginBottom: spacing.md, fontSize: 14 },
+    note: { marginTop: spacing.lg, fontSize: 13 },
+  });

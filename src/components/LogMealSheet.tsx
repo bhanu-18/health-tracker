@@ -5,7 +5,9 @@ import { Button } from './Button';
 import { Body, Caption, Title } from './Typography';
 import type { MealSlot } from '../db/schema';
 import { scaleNutrition, type NutritionFacts } from '../lib/nutrition';
-import { colors, metricColors, metricTints, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
+import type { Theme } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/useTheme';
 
 export type LogMealTarget = {
   name: string;
@@ -36,6 +38,8 @@ const PORTIONS = [0.5, 1, 1.5, 2, 3];
  * always one of a handful of answers. Typing 1.0 is slower than tapping it.
  */
 export function LogMealSheet({ target, defaultSlot, onCancel, onConfirm }: Props) {
+  const { colors, metricColors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [slot, setSlot] = useState<MealSlot>(defaultSlot);
   const [servings, setServings] = useState(1);
 
@@ -104,29 +108,30 @@ export function LogMealSheet({ target, defaultSlot, onCancel, onConfirm }: Props
   );
 }
 
-const styles = StyleSheet.create({
-  sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: { textTransform: 'capitalize' },
-  totals: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: metricTints.food,
-    gap: spacing.xs,
-  },
-  cancel: { marginTop: spacing.md },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
+    row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    chip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      backgroundColor: t.colors.surface,
+    },
+    chipSelected: {
+      backgroundColor: t.colors.primary,
+      borderColor: t.colors.primary,
+    },
+    chipText: { textTransform: 'capitalize' },
+    totals: {
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
+      padding: spacing.lg,
+      borderRadius: radius.md,
+      backgroundColor: t.metricTints.food,
+      gap: spacing.xs,
+    },
+    cancel: { marginTop: spacing.md },
+  });

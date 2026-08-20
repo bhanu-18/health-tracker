@@ -6,7 +6,8 @@ import { FormField } from '../../src/components/FormField';
 import { Screen } from '../../src/components/Screen';
 import { Body, Heading } from '../../src/components/Typography';
 import { createRecipe } from '../../src/db/repositories/recipes';
-import { colors, spacing } from '../../src/theme/tokens';
+import { spacing } from '../../src/theme/tokens';
+import { useTheme } from '../../src/theme/useTheme';
 
 /**
  * Create a recipe: name and serving count only.
@@ -16,6 +17,7 @@ import { colors, spacing } from '../../src/theme/tokens';
  * ingredients and losing them to a mistyped serving count would be miserable.
  */
 export default function NewRecipeScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const [name, setName] = useState('');
   const [serves, setServes] = useState('4');
@@ -73,6 +75,7 @@ export default function NewRecipeScreen() {
   );
 }
 
+// No colours here, so this stylesheet does not depend on the theme.
 const styles = StyleSheet.create({
   form: { gap: spacing.lg, marginTop: spacing.xl, marginBottom: spacing.xl },
   error: { marginBottom: spacing.md, fontSize: 14 },

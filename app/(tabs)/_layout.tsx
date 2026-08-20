@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import { colors, fontSize } from '../../src/theme/tokens';
+import { fontSize } from '../../src/theme/tokens';
+import { useTheme } from '../../src/theme/useTheme';
 
 /**
  * The four V1 screens.
@@ -10,6 +11,7 @@ import { colors, fontSize } from '../../src/theme/tokens';
  * day, and history is last because it is browsed occasionally.
  */
 export default function TabsLayout() {
+  const { colors } = useTheme();
   return (
     <Tabs
       screenOptions={{

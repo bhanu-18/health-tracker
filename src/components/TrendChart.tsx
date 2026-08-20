@@ -1,7 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Caption } from './Typography';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
+import { useTheme } from '../theme/useTheme';
 
 export type TrendPoint = {
   /** X position as a value that increases with time; usually a day index. */
@@ -26,6 +27,7 @@ type Props = {
  * would add a large dependency plus its own styling opinions to fight.
  */
 export function TrendChart({ points, color, height = 180, goal, formatValue }: Props) {
+  const { colors } = useTheme();
   if (points.length < 2) {
     return (
       <View style={[styles.empty, { height }]}>
@@ -103,6 +105,7 @@ export function TrendChart({ points, color, height = 180, goal, formatValue }: P
   );
 }
 
+// No colours here, so this stylesheet does not depend on the theme.
 const styles = StyleSheet.create({
   empty: { alignItems: 'center', justifyContent: 'center' },
   axis: {

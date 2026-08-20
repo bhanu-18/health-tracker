@@ -7,7 +7,9 @@ import { Screen } from '../../src/components/Screen';
 import { Body, Caption, Heading } from '../../src/components/Typography';
 import { createFood } from '../../src/db/repositories/foods';
 import { caloriesFromMacros, macrosLookInconsistent } from '../../src/lib/nutrition';
-import { colors, metricTints, radius, spacing } from '../../src/theme/tokens';
+import { radius, spacing } from '../../src/theme/tokens';
+import type { Theme } from '../../src/theme/tokens';
+import { useTheme, useThemedStyles } from '../../src/theme/useTheme';
 
 /** Millilitres in one cup, matching the conversion table in lib/recipes.ts. */
 const ML_PER_CUP = 240;
@@ -30,6 +32,8 @@ const parse = (value: string): number => {
  * quietly disappeared.
  */
 export default function NewFoodScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -208,24 +212,25 @@ export default function NewFoodScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  intro: { marginTop: spacing.sm, marginBottom: spacing.lg },
-  form: { gap: spacing.lg, marginBottom: spacing.lg },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.lg,
-  },
-  toggleText: { flex: 1, gap: 2 },
-  toggleHint: { fontSize: 13 },
-  fieldHint: { fontSize: 13, marginTop: -spacing.sm },
-  warning: {
-    padding: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: metricTints.weight,
-    marginBottom: spacing.lg,
-  },
-  warningText: { fontSize: 14, color: colors.text },
-  error: { marginBottom: spacing.md, fontSize: 14 },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    intro: { marginTop: spacing.sm, marginBottom: spacing.lg },
+    form: { gap: spacing.lg, marginBottom: spacing.lg },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.lg,
+    },
+    toggleText: { flex: 1, gap: 2 },
+    toggleHint: { fontSize: 13 },
+    fieldHint: { fontSize: 13, marginTop: -spacing.sm },
+    warning: {
+      padding: spacing.lg,
+      borderRadius: radius.md,
+      backgroundColor: t.metricTints.weight,
+      marginBottom: spacing.lg,
+    },
+    warningText: { fontSize: 14, color: t.colors.text },
+    error: { marginBottom: spacing.md, fontSize: 14 },
+  });

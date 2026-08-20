@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
-import { colors, fontSize, radius, spacing } from '../theme/tokens';
+import { fontSize, radius, spacing } from '../theme/tokens';
+import type { Theme } from '../theme/tokens';
+import { useThemedStyles } from '../theme/useTheme';
 
 type Props = {
   children: ReactNode;
@@ -23,6 +25,7 @@ type Props = {
  * anything: the swipe exposes the choice, the tap makes it.
  */
 export function SwipeToDelete({ children, onDelete, label }: Props) {
+  const styles = useThemedStyles(makeStyles);
   const swipeRef = useRef<Swipeable>(null);
 
   const renderRightActions = () => (
@@ -63,18 +66,19 @@ export function SwipeToDelete({ children, onDelete, label }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  action: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.danger,
-    width: 96,
-    borderRadius: radius.md,
-    marginBottom: spacing.sm,
-  },
-  actionText: {
-    color: colors.primaryText,
-    fontSize: fontSize.body,
-    fontWeight: '600',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    action: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: t.colors.danger,
+      width: 96,
+      borderRadius: radius.md,
+      marginBottom: spacing.sm,
+    },
+    actionText: {
+      color: t.colors.primaryText,
+      fontSize: fontSize.body,
+      fontWeight: '600',
+    },
+  });

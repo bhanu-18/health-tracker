@@ -6,7 +6,9 @@ import { Screen } from '../../src/components/Screen';
 import { Body, Caption, Heading } from '../../src/components/Typography';
 import { getRecipes } from '../../src/db/repositories/recipes';
 import type { Recipe } from '../../src/db/schema';
-import { colors, metricColors, radius, spacing } from '../../src/theme/tokens';
+import { radius, spacing } from '../../src/theme/tokens';
+import type { Theme } from '../../src/theme/tokens';
+import { useTheme, useThemedStyles } from '../../src/theme/useTheme';
 
 /**
  * Recipe library.
@@ -16,6 +18,8 @@ import { colors, metricColors, radius, spacing } from '../../src/theme/tokens';
  * rather than estimated from a generic database.
  */
 export default function RecipesScreen() {
+  const { colors, metricColors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
 
@@ -70,21 +74,22 @@ export default function RecipesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  intro: { marginTop: spacing.sm, marginBottom: spacing.lg },
-  empty: { paddingVertical: spacing.xl },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  rowInfo: { gap: 2, flex: 1 },
-  meta: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
-  action: { marginTop: spacing.xl },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    intro: { marginTop: spacing.sm, marginBottom: spacing.lg },
+    empty: { paddingVertical: spacing.xl },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    rowInfo: { gap: 2, flex: 1 },
+    meta: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
+    action: { marginTop: spacing.xl },
+  });

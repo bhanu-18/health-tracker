@@ -21,7 +21,9 @@ import { getRecentWeightEntries } from '../../src/db/repositories/weight';
 import { calculateWeightTrend } from '../../src/lib/weight';
 import { formatWeightDelta, fromKg } from '../../src/lib/units';
 import type { WeightEntryRow } from '../../src/db/schema';
-import { colors, metricColors, metricTints, radius, spacing } from '../../src/theme/tokens';
+import { radius, spacing } from '../../src/theme/tokens';
+import type { Theme } from '../../src/theme/tokens';
+import { useTheme, useThemedStyles } from '../../src/theme/useTheme';
 
 /**
  * Screen 1 -- Today.
@@ -31,6 +33,8 @@ import { colors, metricColors, metricTints, radius, spacing } from '../../src/th
  * many times larger than the numbers you merely glance at.
  */
 export default function TodayScreen() {
+  const { colors, metricColors, metricTints } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const date = today();
 
@@ -186,76 +190,77 @@ export default function TodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  greeting: {
-    marginTop: spacing.xs,
-  },
-  notice: {
-    marginTop: spacing.lg,
-    padding: spacing.md,
-    borderRadius: radius.sm,
-    backgroundColor: metricTints.weight,
-  },
-  noticeText: {
-    fontSize: 13,
-    color: colors.text,
-  },
-  hero: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.xl,
-  },
-  heroLabel: {
-    fontWeight: '500',
-    marginTop: spacing.xs,
-  },
-  progressWrap: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  progressLegend: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  legendText: {
-    textTransform: 'none',
-    letterSpacing: 0,
-    fontWeight: '500',
-  },
-  statRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  mealsSection: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  sectionHeading: {
-    fontSize: 20,
-    marginBottom: spacing.md,
-  },
-  mealList: {
-    gap: spacing.sm,
-  },
-  mealRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-  },
-  mealInfo: {
-    gap: 2,
-  },
-  mealMeta: {
-    textTransform: 'capitalize',
-    letterSpacing: 0,
-    fontWeight: '400',
-  },
-  settingsLink: {
-    marginTop: spacing.md,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    greeting: {
+      marginTop: spacing.xs,
+    },
+    notice: {
+      marginTop: spacing.lg,
+      padding: spacing.md,
+      borderRadius: radius.sm,
+      backgroundColor: t.metricTints.weight,
+    },
+    noticeText: {
+      fontSize: 13,
+      color: t.colors.text,
+    },
+    hero: {
+      marginTop: spacing.xl,
+      marginBottom: spacing.xl,
+    },
+    heroLabel: {
+      fontWeight: '500',
+      marginTop: spacing.xs,
+    },
+    progressWrap: {
+      marginTop: spacing.lg,
+      gap: spacing.sm,
+    },
+    progressLegend: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    legendText: {
+      textTransform: 'none',
+      letterSpacing: 0,
+      fontWeight: '500',
+    },
+    statRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    mealsSection: {
+      marginTop: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    sectionHeading: {
+      fontSize: 20,
+      marginBottom: spacing.md,
+    },
+    mealList: {
+      gap: spacing.sm,
+    },
+    mealRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+    },
+    mealInfo: {
+      gap: 2,
+    },
+    mealMeta: {
+      textTransform: 'capitalize',
+      letterSpacing: 0,
+      fontWeight: '400',
+    },
+    settingsLink: {
+      marginTop: spacing.md,
+    },
+  });

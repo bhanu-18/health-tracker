@@ -19,7 +19,9 @@ import { today } from '../../src/lib/dates';
 import { searchFoods, type SearchFilters, type SortOrder } from '../../src/lib/foodSearch';
 import { scaleNutrition } from '../../src/lib/nutrition';
 import { useFoodLog } from '../../src/stores/foodLog';
-import { colors, metricColors, metricTints, radius, spacing } from '../../src/theme/tokens';
+import { radius, spacing } from '../../src/theme/tokens';
+import type { Theme } from '../../src/theme/tokens';
+import { useTheme, useThemedStyles } from '../../src/theme/useTheme';
 
 /** Meal slot suggested from the clock, so the common case needs no thought. */
 function slotForNow(date = new Date()): MealSlot {
@@ -63,6 +65,8 @@ const CALORIE_FILTERS: { label: string; filters: SearchFilters }[] = [
  * logging should be one tap and never reach the search field at all.
  */
 export default function FoodScreen() {
+  const { colors, metricColors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [filterIndex, setFilterIndex] = useState(0);
@@ -365,55 +369,61 @@ export default function FoodScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  searchWrap: { marginTop: spacing.lg },
-  recipesLink: { marginTop: spacing.md },
-  newFoodLink: { marginTop: spacing.sm },
-  emptyState: { marginTop: spacing.md },
-  emptyAction: { marginTop: spacing.lg },
-  filterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { textTransform: 'none', letterSpacing: 0 },
-  loading: { marginTop: spacing.xxl },
-  section: { marginTop: spacing.xl },
-  sectionTitle: { fontSize: 18 },
-  sectionHint: { textTransform: 'none', letterSpacing: 0, marginTop: 2, marginBottom: spacing.md },
-  usualRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: metricTints.food,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  foodRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  rowInfo: { gap: 2, flex: 1 },
-  rowMeta: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
-  rowRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  empty: { marginTop: spacing.md },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    searchWrap: { marginTop: spacing.lg },
+    recipesLink: { marginTop: spacing.md },
+    newFoodLink: { marginTop: spacing.sm },
+    emptyState: { marginTop: spacing.md },
+    emptyAction: { marginTop: spacing.lg },
+    filterRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    chip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      backgroundColor: t.colors.surface,
+    },
+    chipSelected: { backgroundColor: t.colors.primary, borderColor: t.colors.primary },
+    chipText: { textTransform: 'none', letterSpacing: 0 },
+    loading: { marginTop: spacing.xxl },
+    section: { marginTop: spacing.xl },
+    sectionTitle: { fontSize: 18 },
+    sectionHint: {
+      textTransform: 'none',
+      letterSpacing: 0,
+      marginTop: 2,
+      marginBottom: spacing.md,
+    },
+    usualRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: t.metricTints.food,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    foodRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    rowInfo: { gap: 2, flex: 1 },
+    rowMeta: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
+    rowRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+    empty: { marginTop: spacing.md },
+  });

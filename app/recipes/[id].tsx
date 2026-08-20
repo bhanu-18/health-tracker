@@ -16,7 +16,9 @@ import {
 import { today } from '../../src/lib/dates';
 import { formatAmount, type IngredientUnit } from '../../src/lib/recipes';
 import { useFoodLog } from '../../src/stores/foodLog';
-import { colors, metricColors, metricTints, radius, spacing } from '../../src/theme/tokens';
+import { radius, spacing } from '../../src/theme/tokens';
+import type { Theme } from '../../src/theme/tokens';
+import { useTheme, useThemedStyles } from '../../src/theme/useTheme';
 
 /** Meal slot suggested from the clock, matching the food screen. */
 function slotForNow(date = new Date()) {
@@ -36,6 +38,8 @@ function slotForNow(date = new Date()) {
  * actually cooked.
  */
 export default function RecipeDetailScreen() {
+  const { colors, metricColors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const logMeal = useFoodLog((s) => s.logMeal);
@@ -189,34 +193,40 @@ export default function RecipeDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  serves: { marginTop: spacing.xs },
-  hero: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.xl,
-    padding: spacing.xl,
-    borderRadius: radius.md,
-    backgroundColor: metricTints.food,
-  },
-  heroNumber: { fontSize: 52, lineHeight: 56 },
-  heroLabel: { fontWeight: '500', marginTop: spacing.xs },
-  heroMacros: { textTransform: 'none', letterSpacing: 0, fontWeight: '400', marginTop: spacing.sm },
-  sectionTitle: { fontSize: 18, marginBottom: spacing.md },
-  empty: { marginBottom: spacing.lg },
-  ingredientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  ingredientInfo: { gap: 2, flex: 1 },
-  amount: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
-  addRow: { marginTop: spacing.md },
-  logRow: { marginTop: spacing.md },
-  hint: { marginTop: spacing.lg, fontSize: 13 },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    serves: { marginTop: spacing.xs },
+    hero: {
+      marginTop: spacing.xl,
+      marginBottom: spacing.xl,
+      padding: spacing.xl,
+      borderRadius: radius.md,
+      backgroundColor: t.metricTints.food,
+    },
+    heroNumber: { fontSize: 52, lineHeight: 56 },
+    heroLabel: { fontWeight: '500', marginTop: spacing.xs },
+    heroMacros: {
+      textTransform: 'none',
+      letterSpacing: 0,
+      fontWeight: '400',
+      marginTop: spacing.sm,
+    },
+    sectionTitle: { fontSize: 18, marginBottom: spacing.md },
+    empty: { marginBottom: spacing.lg },
+    ingredientRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    ingredientInfo: { gap: 2, flex: 1 },
+    amount: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
+    addRow: { marginTop: spacing.md },
+    logRow: { marginTop: spacing.md },
+    hint: { marginTop: spacing.lg, fontSize: 13 },
+  });
