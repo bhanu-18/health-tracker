@@ -11,7 +11,6 @@ import { searchFoods } from '../lib/foodSearch';
 import {
   formatAmount,
   isMassUnit,
-  isVolumeUnit,
   nutritionForIngredient,
   supportedUnits,
   type IngredientSource,

@@ -278,6 +278,35 @@ export const SEED_INGREDIENTS: NewFood[] = [
   ),
   perPiece('ing-olive-oil', 'Olive oil', '1 tbsp (14 g)', 14, 119, 0, 0, 13.5, 'Fat', DENSITY.oil),
 
+  /**
+   * Cooking spray, labelled "0 calories" -- which is a labelling rule, not
+   * physics.
+   *
+   * US nutrition labelling permits anything under 5 kcal per serving to be
+   * declared as 0, and the manufacturer defines the serving as roughly a
+   * third-of-a-second spray (about 0.25 g). At 9 kcal per gram of oil that is
+   * genuinely ~2 kcal, so the label is legal. It is still oil.
+   *
+   * A real one-second spray over a pan is closer to 1 g, and people spray for
+   * several seconds. Recording it as 0 would put an invisible 30-60 kcal into
+   * every stir-fry -- precisely the sort of quiet drift this app exists to
+   * eliminate, and worse than a wrong number because it is unquestionable.
+   *
+   * Recorded per one-second spray, at the calorie density of oil.
+   */
+  perPiece(
+    'ing-oil-spray',
+    'Avocado oil spray',
+    '1 second spray (1 g)',
+    1,
+    9,
+    0,
+    0,
+    1,
+    'Fat',
+    DENSITY.oil,
+  ),
+
   // --- Nuts and seeds ------------------------------------------------------
   per100g('ing-almonds', 'Almonds', 579, 21, 22, 50, 'Nut'),
   per100g('ing-cashews', 'Cashews', 553, 18, 30, 44, 'Nut'),

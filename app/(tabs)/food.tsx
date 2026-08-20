@@ -16,7 +16,7 @@ import {
 } from '../../src/db/repositories/usualMeals';
 import type { Food, MealSlot } from '../../src/db/schema';
 import { today } from '../../src/lib/dates';
-import { searchFoods, type SearchFilters } from '../../src/lib/foodSearch';
+import { searchFoods, type SearchFilters, type SortOrder } from '../../src/lib/foodSearch';
 import { scaleNutrition } from '../../src/lib/nutrition';
 import { useFoodLog } from '../../src/stores/foodLog';
 import { colors, metricColors, metricTints, radius, spacing } from '../../src/theme/tokens';
@@ -29,6 +29,23 @@ function slotForNow(date = new Date()): MealSlot {
   if (hour < 21) return 'dinner';
   return 'snack';
 }
+
+/**
+ * Sort orders.
+ *
+ * Deliberately absent: sorting a whole library by calories. While logging you
+ * are looking for a specific food, and relevance already handles that -- a
+ * calorie leaderboard is mostly a list of nuts and oils, which is not a
+ * question anyone has while cooking.
+ *
+ * Sorting is instead what makes a *filter* actionable: "High protein" ordered
+ * by protein density tells you what to eat, where alphabetical does not.
+ */
+const SORTS: { label: string; value: SortOrder }[] = [
+  { label: 'A-Z', value: 'relevance' },
+  { label: 'Lowest calories', value: 'calories' },
+  { label: 'Most protein per kcal', value: 'proteinDensity' },
+];
 
 /** Calorie bands for the rule-based filter. Not AI, per the V1 scope. */
 const CALORIE_FILTERS: { label: string; filters: SearchFilters }[] = [
@@ -49,6 +66,7 @@ export default function FoodScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [filterIndex, setFilterIndex] = useState(0);
+  const [sortIndex, setSortIndex] = useState(0);
   const [candidates, setCandidates] = useState<Food[]>([]);
   const [usuals, setUsuals] = useState<UsualMealWithFood[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -215,6 +233,23 @@ export default function FoodScreen() {
               color={filterIndex === index ? colors.primaryText : colors.textMuted}
             >
               {filter.label}
+            </Caption>
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.filterRow}>
+        {SORTS.map((option, index) => (
+          <Pressable
+            key={option.value}
+            onPress={() => setSortIndex(index)}
+            style={[styles.chip, sortIndex === index && styles.chipSelected]}
+          >
+            <Caption
+              style={styles.chipText}
+              color={sortIndex === index ? colors.primaryText : colors.textMuted}
+            >
+              {option.label}
             </Caption>
           </Pressable>
         ))}

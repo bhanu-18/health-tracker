@@ -1,6 +1,7 @@
 import {
   matchesFilters,
   normalizeName,
+  proteinDensity,
   scoreMatch,
   searchFoods,
   type SearchableFood,
@@ -144,5 +145,68 @@ describe('searchFoods', () => {
 
   it('returns nothing when the query matches nothing', () => {
     expect(searchFoods(library, 'biryani')).toEqual([]);
+  });
+});
+
+describe('proteinDensity', () => {
+  const almonds = food('Almonds', { calories: 579, proteinG: 21 });
+  const chicken = food('Chicken breast', { calories: 165, proteinG: 31 });
+
+  /**
+   * The reason sorting uses density rather than raw grams. By absolute protein
+   * these two look comparable; per calorie they are not close, and per calorie
+   * is what matters when hitting a protein target inside a calorie budget.
+   */
+  it('ranks chicken far above almonds despite similar protein', () => {
+    expect(almonds.proteinG).toBeLessThan(chicken.proteinG * 1.5);
+    expect(proteinDensity(chicken)).toBeGreaterThan(proteinDensity(almonds) * 4);
+  });
+
+  it('returns zero for a zero-calorie food rather than Infinity', () => {
+    // A spice with a trace of protein must not head the list.
+    expect(proteinDensity(food('Salt', { calories: 0, proteinG: 0.1 }))).toBe(0);
+  });
+});
+
+describe('searchFoods sorting', () => {
+  const library = [
+    food('Almonds', { calories: 579, proteinG: 21 }),
+    food('Chicken breast', { calories: 165, proteinG: 31 }),
+    food('Cucumber', { calories: 15, proteinG: 0.7 }),
+  ];
+
+  it('sorts alphabetically by default', () => {
+    expect(searchFoods(library, '').map((f) => f.name)).toEqual([
+      'Almonds',
+      'Chicken breast',
+      'Cucumber',
+    ]);
+  });
+
+  it('sorts by lowest calories', () => {
+    expect(searchFoods(library, '', {}, 'calories').map((f) => f.name)).toEqual([
+      'Cucumber',
+      'Chicken breast',
+      'Almonds',
+    ]);
+  });
+
+  it('sorts by protein per calorie, not by raw protein', () => {
+    const ranked = searchFoods(library, '', {}, 'proteinDensity').map((f) => f.name);
+    expect(ranked[0]).toBe('Chicken breast');
+    // Almonds have the second-highest raw protein but the worst density here.
+    expect(ranked[ranked.length - 1]).toBe('Almonds');
+  });
+
+  it('keeps relevance ahead of sort while a query is active', () => {
+    // Someone who typed "almonds" wants almonds, not whichever match is
+    // leanest.
+    const results = searchFoods(library, 'almonds', {}, 'proteinDensity');
+    expect(results[0]!.name).toBe('Almonds');
+  });
+
+  it('makes a filter actionable by ranking within it', () => {
+    const results = searchFoods(library, '', { proteinG: { min: 10 } }, 'proteinDensity');
+    expect(results.map((f) => f.name)).toEqual(['Chicken breast', 'Almonds']);
   });
 });
