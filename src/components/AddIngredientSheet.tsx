@@ -8,7 +8,12 @@ import { Body, Caption } from './Typography';
 import { getAllFoods } from '../db/repositories/foods';
 import type { Food } from '../db/schema';
 import { searchFoods } from '../lib/foodSearch';
-import { formatAmount, nutritionForIngredient, type IngredientUnit } from '../lib/recipes';
+import {
+  formatAmount,
+  isMassUnit,
+  nutritionForIngredient,
+  type IngredientUnit,
+} from '../lib/recipes';
 import { colors, metricColors, metricTints, radius, spacing } from '../theme/tokens';
 
 const UNITS: IngredientUnit[] = ['g', 'kg', 'ml', 'tbsp', 'tsp', 'cup', 'piece'];
@@ -123,6 +128,28 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
     setUnit('g');
   };
 
+  /**
+   * Switching units resets the amount to something sensible for that unit.
+   *
+   * Carrying the number across is how "100 g" silently became "100 cup" -- 100
+   * cups of raw rice, shown as 35,000 kcal without complaint. Nobody means
+   * that, and a recipe total built on it would be nonsense.
+   */
+  const changeUnit = (next: IngredientUnit) => {
+    setUnit(next);
+    if (!selected) return;
+
+    if (isMassUnit(next)) {
+      setQuantity(next === 'kg' ? '1' : String(selected.servingGrams ?? 100));
+    } else if (next === 'ml') {
+      setQuantity('100');
+    } else {
+      // Spoons, cups and pieces are counted, and the answer is nearly always
+      // a small number.
+      setQuantity('1');
+    }
+  };
+
   const confirm = () => {
     if (!selected || !preview) return;
     onAdd({
@@ -143,11 +170,29 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
       visible={visible}
       title="Add ingredient"
       onDismiss={onCancel}
-      footer={<Button label="Cancel" variant="secondary" onPress={onCancel} />}
+      footer={
+        <>
+          {/* The confirm action lives in the pinned footer. It was previously
+              the last item in a flex:1 body that did not scroll, so it was
+              clipped off the bottom and the sheet had no way to add anything. */}
+          {selected ? (
+            <View style={styles.confirm}>
+              {/* Distinct from the sheet title, which also reads "Add
+                  ingredient" -- two identical labels on one screen is
+                  ambiguous about what the button does. */}
+              <Button
+                label={preview ? 'Add to recipe' : 'Cannot convert this amount'}
+                onPress={confirm}
+              />
+            </View>
+          ) : null}
+          <Button label="Cancel" variant="secondary" onPress={onCancel} />
+        </>
+      }
     >
       <View style={styles.body}>
         {selected ? (
-          <>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <Pressable onPress={() => setSelected(null)} style={styles.selected}>
               <Body>{selected.name}</Body>
               <Caption color={colors.textFaint}>
@@ -171,7 +216,7 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
               {UNITS.map((option) => (
                 <Pressable
                   key={option}
-                  onPress={() => setUnit(option)}
+                  onPress={() => changeUnit(option)}
                   style={[styles.chip, unit === option && styles.chipSelected]}
                 >
                   <Body color={unit === option ? colors.primaryText : colors.text}>{option}</Body>
@@ -198,9 +243,7 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
                 </Body>
               )}
             </View>
-
-            <Button label="Add" onPress={confirm} />
-          </>
+          </ScrollView>
         ) : (
           <>
             {/* The search field is the first thing in a fixed-height sheet, so
@@ -249,6 +292,7 @@ export function AddIngredientSheet({ visible, onCancel, onAdd }: Props) {
 
 const styles = StyleSheet.create({
   body: { flex: 1 },
+  confirm: { marginBottom: spacing.md },
   // Flexes into whatever the sheet has left, rather than a fixed height that
   // would leave dead space on a short list and clip a long one.
   results: { flex: 1, marginTop: spacing.md },

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Heading } from './Typography';
 import { colors, radius, spacing } from '../theme/tokens';
 
@@ -33,15 +34,23 @@ type Props = {
  *     the header and footer stay reachable at any content length.
  */
 export function BottomSheet({ visible, title, onDismiss, children, footer }: Props) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss}>
-      <View style={styles.container}>
+      {/* Top inset keeps the sheet clear of the status bar and notch. Without
+          it, a tall sheet plus an open keyboard runs the title under the
+          clock. */}
+      <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
         <Pressable style={styles.backdrop} onPress={onDismiss} accessibilityLabel="Dismiss" />
 
         <KeyboardAvoidingView
           // 'padding' is correct on iOS; Android resizes the window itself and
           // applying it there double-counts the keyboard.
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          // flex: 1 is load-bearing. Without it this view sizes to its content,
+          // the percentage heights below resolve against an unsized parent, and
+          // the sheet grows past the top of the screen.
           style={styles.avoider}
         >
           <View style={styles.sheet}>
@@ -67,7 +76,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(28, 25, 23, 0.35)',
   },
-  avoider: { justifyContent: 'flex-end' },
+  avoider: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.background,
     borderTopLeftRadius: radius.lg,
@@ -75,10 +84,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
-    // The pair that fixes the reported problem: a floor so the sheet does not
-    // shrink around short content, and a ceiling so it never covers the screen.
-    minHeight: '62%',
-    maxHeight: '88%',
+    // A floor so the sheet does not shrink around short content, and a ceiling
+    // so it never fills the space it has been given. Both are percentages of
+    // the keyboard-adjusted area above, so they shrink together when the
+    // keyboard opens rather than overflowing.
+    minHeight: '55%',
+    maxHeight: '100%',
   },
   title: { fontSize: 22, marginBottom: spacing.lg },
   // Takes the remaining height, so the footer stays pinned and the middle
