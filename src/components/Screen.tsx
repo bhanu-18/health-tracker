@@ -1,23 +1,35 @@
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '../theme/tokens';
 import type { Theme } from '../theme/tokens';
-import { useThemedStyles } from '../theme/useTheme';
+import { useTheme, useThemedStyles } from '../theme/useTheme';
 
 type Props = {
   children: ReactNode;
   /** Set false for screens that manage their own scrolling (e.g. a long list). */
   scroll?: boolean;
+  /**
+   * Enables pull-to-refresh.
+   *
+   * Matters most where the data is written by something else -- a band that
+   * syncs to its own app, which then writes to the health store. The user knows
+   * when they have just forced a sync; the app cannot, so it needs a way to be
+   * told.
+   */
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 };
 
 /**
  * Standard screen frame: background colour, horizontal padding, and safe-area
  * handling so content never sits under the notch or the home indicator.
  */
-export function Screen({ children, scroll = true }: Props) {
+export function Screen({ children, scroll = true, onRefresh, isRefreshing = false }: Props) {
   const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const tint = colors.textMuted;
   const padding = {
     paddingTop: insets.top + spacing.lg,
     // Clear the tab bar as well as the home indicator.
@@ -33,6 +45,11 @@ export function Screen({ children, scroll = true }: Props) {
       style={styles.container}
       contentContainerStyle={[styles.content, padding]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={tint} />
+        ) : undefined
+      }
     >
       {children}
     </ScrollView>

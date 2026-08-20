@@ -50,6 +50,19 @@ export type DailyHealthMetrics = {
   activeEnergyKcal: number | null;
   /** Deduplicated time asleep, in hours. */
   sleepHours: number | null;
+
+  /**
+   * When the most recent sample behind these figures was recorded.
+   *
+   * Not decoration. Data can arrive here through a long chain -- a band syncs
+   * to its own app, that app writes to HealthKit, and only then can this app
+   * read it. Each hop adds delay, and none of it is visible in the number
+   * itself. Showing a total without saying how old it is presents a stale
+   * reading as a current one.
+   *
+   * Null when nothing has been recorded for the day.
+   */
+  lastRecordedAt: Date | null;
 };
 
 export type WorkoutSession = {

@@ -6,6 +6,7 @@ export type WeeklyHealth = {
   /** Oldest first, ending on `date`. Nulls are days with no data. */
   days: DailyHealthMetrics[];
   isLoading: boolean;
+  refresh: () => void;
 };
 
 /**
@@ -16,7 +17,10 @@ export type WeeklyHealth = {
  * different refresh needs.
  */
 export function useWeeklyHealth(date: ISODate, days = 7): WeeklyHealth {
-  const [state, setState] = useState<WeeklyHealth>({ days: [], isLoading: true });
+  const [state, setState] = useState<Omit<WeeklyHealth, 'refresh'>>({
+    days: [],
+    isLoading: true,
+  });
 
   const load = useCallback(async () => {
     try {
@@ -36,7 +40,7 @@ export function useWeeklyHealth(date: ISODate, days = 7): WeeklyHealth {
     void load();
   }, [load]);
 
-  return state;
+  return { ...state, refresh: load };
 }
 
 /**
