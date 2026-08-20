@@ -11,3 +11,13 @@ import '@testing-library/react-native';
 // throws on import rather than rendering.
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factories are hoisted above imports, so require() is required here.
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+
+/**
+ * Icons render as nothing in tests.
+ *
+ * @expo/vector-icons imports expo-font, which reaches for a native module that
+ * does not exist under Node. Icons carry no behaviour worth asserting, so a
+ * stub is honest rather than lossy -- anything meaningful they convey should be
+ * reachable through an accessibility label instead.
+ */
+jest.mock('@expo/vector-icons/Ionicons', () => 'Ionicons');
