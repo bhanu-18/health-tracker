@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { ProgressBar } from '../../src/components/ProgressBar';
@@ -8,9 +8,9 @@ import { StatCard } from '../../src/components/StatCard';
 import { Body, Caption, Display, Heading, Title } from '../../src/components/Typography';
 import { useDailyHealth } from '../../src/hooks/useDailyHealth';
 import { formatLongDate, greetingFor, today } from '../../src/lib/dates';
-import { calculateEnergyBalance, sumNutrition } from '../../src/lib/nutrition';
+import { calculateEnergyBalance } from '../../src/lib/nutrition';
 import { isUsingMockHealthData } from '../../src/services/health';
-import { useFoodLog } from '../../src/stores/foodLog';
+import { totalsFor, useFoodLog } from '../../src/stores/foodLog';
 import { useProfile } from '../../src/stores/profile';
 import { colors, metricColors, metricTints, radius, spacing } from '../../src/theme/tokens';
 
@@ -31,11 +31,15 @@ export default function TodayScreen() {
   // Select the raw array, then derive. A selector must return a stable
   // reference: Zustand compares results with Object.is, so a selector that
   // filters or reduces builds a new object every call, which reads as "changed"
-  // and re-renders forever. `s.entries` only changes when an entry is actually
-  // added or removed.
-  const allEntries = useFoodLog((s) => s.entries);
-  const entries = useMemo(() => allEntries.filter((e) => e.date === date), [allEntries, date]);
-  const totals = useMemo(() => sumNutrition(entries), [entries]);
+  // and re-renders forever. `s.entries` only changes when the store reloads.
+  const entries = useFoodLog((s) => s.entries);
+  const loadForDate = useFoodLog((s) => s.loadForDate);
+  const totals = useMemo(() => totalsFor(entries), [entries]);
+
+  // The store holds one day at a time, so the screen asks for the day it shows.
+  useEffect(() => {
+    void loadForDate(date);
+  }, [loadForDate, date]);
 
   const balance = calculateEnergyBalance({
     target: calorieTarget,
