@@ -4,12 +4,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { BarChart, type Bar } from '../../src/components/BarChart';
 import { GradientBadge } from '../../src/components/GradientBadge';
 import { Screen } from '../../src/components/Screen';
+import { WorkoutRow, formatDuration } from '../../src/components/WorkoutRow';
 import { TrendChart } from '../../src/components/TrendChart';
 import { Body, Caption, Heading, Title } from '../../src/components/Typography';
 import { today } from '../../src/lib/dates';
 import { fromKg } from '../../src/lib/units';
 import { meanOf, useHistory, type HistoryRange } from '../../src/hooks/useHistory';
-import type { WorkoutSession } from '../../src/services/health';
 import { selectStepGoal, selectWeightUnit, useProfile } from '../../src/stores/profile';
 import { useSelectedDate } from '../../src/stores/selectedDate';
 import { radius, spacing, type MetricKey, type Theme } from '../../src/theme/tokens';
@@ -21,9 +21,6 @@ const shortLabel = (iso: string): string => {
   const local = new Date(parts[0] ?? 1970, (parts[1] ?? 1) - 1, parts[2] ?? 1);
   return local.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
-
-const formatDuration = (minutes: number): string =>
-  minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 
 /**
  * Screen 4 -- History.
@@ -180,7 +177,7 @@ export default function HistoryScreen() {
             ) : (
               <>
                 {workouts.map((workout) => (
-                  <WorkoutRow key={workout.id} workout={workout} />
+                  <WorkoutRow key={workout.id} workout={workout} showDate />
                 ))}
 
                 {/* Stated rather than hidden. The OS merges cumulative metrics
@@ -244,32 +241,6 @@ function ChartCard({
   );
 }
 
-function WorkoutRow({ workout }: { workout: WorkoutSession }) {
-  const theme = useTheme();
-  const styles = useThemedStyles(makeStyles);
-
-  return (
-    <View style={styles.workoutRow}>
-      <View style={styles.workoutInfo}>
-        <Body>{workout.activityType}</Body>
-        <Caption style={styles.workoutMeta} color={theme.colors.textFaint}>
-          {`${formatDuration(workout.durationMinutes)} · ${workout.sourceName}`}
-        </Caption>
-      </View>
-      {workout.energyKcal != null ? (
-        <View style={styles.calorieGroup}>
-          <Body style={styles.workoutCalories} color={theme.metricColors.food}>
-            {workout.energyKcal}
-          </Body>
-          <Caption style={styles.calorieUnit} color={theme.colors.textFaint}>
-            kcal
-          </Caption>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
 const makeStyles = (t: Theme) =>
   StyleSheet.create({
     rangeRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
@@ -306,20 +277,7 @@ const makeStyles = (t: Theme) =>
       marginBottom: spacing.md,
     },
     sectionTitle: { fontSize: 18 },
-    workoutRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: t.colors.surface,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      marginBottom: spacing.sm,
-      ...t.shadows.card,
-    },
-    workoutInfo: { gap: 2, flex: 1 },
-    workoutMeta: { textTransform: 'none', letterSpacing: 0, fontWeight: '400' },
     calorieGroup: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
-    workoutCalories: { fontWeight: '700', fontSize: 17 },
     calorieUnit: { textTransform: 'none', letterSpacing: 0, fontWeight: '500' },
     note: { fontSize: 13, marginTop: spacing.md },
   });

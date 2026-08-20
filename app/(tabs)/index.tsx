@@ -9,6 +9,7 @@ import { SwipeToDelete } from '../../src/components/SwipeToDelete';
 import { Toast } from '../../src/components/Toast';
 import { MetricCard } from '../../src/components/MetricCard';
 import { SleepStages } from '../../src/components/SleepStages';
+import { WorkoutRow } from '../../src/components/WorkoutRow';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { Screen } from '../../src/components/Screen';
 import { Body, Caption, Heading, Title } from '../../src/components/Typography';
@@ -16,6 +17,7 @@ import { getRecentWeightEntries } from '../../src/db/repositories/weight';
 import type { FoodLogEntry, WeightEntryRow } from '../../src/db/schema';
 import { useDailyHealth } from '../../src/hooks/useDailyHealth';
 import { averageOf, useWeeklyHealth } from '../../src/hooks/useWeeklyHealth';
+import { useDayWorkouts } from '../../src/hooks/useDayWorkouts';
 import { useRefreshOnForeground } from '../../src/hooks/useRefreshOnForeground';
 import { addDays, formatLongDate, greetingFor, today } from '../../src/lib/dates';
 import { describeFreshness, isStale } from '../../src/lib/freshness';
@@ -74,6 +76,7 @@ export default function TodayScreen() {
 
   const { metrics, isLoading, refresh: refreshToday } = useDailyHealth(date);
   const { days, refresh: refreshWeek } = useWeeklyHealth(date);
+  const { workouts, refresh: refreshWorkouts } = useDayWorkouts(date);
 
   const calorieTarget = useProfile(selectCalorieTarget);
   const stepGoal = useProfile(selectStepGoal);
@@ -117,12 +120,13 @@ export default function TodayScreen() {
     try {
       refreshToday();
       refreshWeek();
+      refreshWorkouts();
       await loadForDate(date);
       setWeightRows(await getRecentWeightEntries(30));
     } finally {
       setIsRefreshing(false);
     }
-  }, [refreshToday, refreshWeek, loadForDate, date]);
+  }, [refreshToday, refreshWeek, refreshWorkouts, loadForDate, date]);
 
   useRefreshOnForeground(() => void refreshAll());
 
@@ -346,6 +350,29 @@ export default function TodayScreen() {
         </View>
       ) : null}
 
+      {workouts.length > 0 ? (
+        <View style={styles.workoutSection}>
+          <View style={styles.sectionHeader}>
+            <Title style={styles.sectionTitle}>Workouts</Title>
+            <Caption color={theme.colors.textFaint}>
+              {`${workouts.length} session${workouts.length === 1 ? '' : 's'}`}
+            </Caption>
+          </View>
+
+          {workouts.map((workout) => (
+            <WorkoutRow key={workout.id} workout={workout} />
+          ))}
+
+          {/* Stated because the number invites the obvious mistake. HealthKit's
+              active energy already includes what these sessions burned, so
+              these calories are a description of the day, not an addition to
+              the budget above. */}
+          <Body style={styles.workoutNote} color={theme.colors.textFaint}>
+            Already counted in active burn above, not added on top.
+          </Body>
+        </View>
+      ) : null}
+
       <View style={styles.mealsSection}>
         <View style={styles.sectionHeader}>
           <Title style={styles.sectionTitle}>Today&apos;s meals</Title>
@@ -452,6 +479,8 @@ const makeStyles = (t: Theme) =>
       marginTop: spacing.xl,
     },
     statRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
+    workoutSection: { marginTop: spacing.lg },
+    workoutNote: { fontSize: 13, marginTop: spacing.xs, marginBottom: spacing.sm },
     mealsSection: { marginTop: spacing.lg, marginBottom: spacing.xl },
     sectionHeader: {
       flexDirection: 'row',
