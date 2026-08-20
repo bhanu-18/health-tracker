@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AnimatedNumber } from '../../src/components/AnimatedNumber';
 import { Button } from '../../src/components/Button';
@@ -15,7 +15,9 @@ import { getRecentWeightEntries } from '../../src/db/repositories/weight';
 import type { FoodLogEntry, WeightEntryRow } from '../../src/db/schema';
 import { useDailyHealth } from '../../src/hooks/useDailyHealth';
 import { averageOf, useWeeklyHealth } from '../../src/hooks/useWeeklyHealth';
+import { useRefreshOnForeground } from '../../src/hooks/useRefreshOnForeground';
 import { formatLongDate, greetingFor, today } from '../../src/lib/dates';
+import { describeFreshness, isStale } from '../../src/lib/freshness';
 import { calculateEnergyBalance } from '../../src/lib/nutrition';
 import { formatWeightDelta, fromKg } from '../../src/lib/units';
 import { calculateWeightTrend } from '../../src/lib/weight';
@@ -59,8 +61,8 @@ export default function TodayScreen() {
   const styles = useThemedStyles(makeStyles);
   const date = today();
 
-  const { metrics, isLoading } = useDailyHealth(date);
-  const { days } = useWeeklyHealth(date);
+  const { metrics, isLoading, refresh: refreshToday } = useDailyHealth(date);
+  const { days, refresh: refreshWeek } = useWeeklyHealth(date);
 
   const calorieTarget = useProfile(selectCalorieTarget);
   const stepGoal = useProfile(selectStepGoal);
@@ -90,6 +92,29 @@ export default function TodayScreen() {
     };
   }, []);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  /**
+   * Re-read everything the screen shows.
+   *
+   * Health metrics, the food log and weight all come from different places and
+   * can each change while the app is backgrounded, so a refresh has to cover
+   * all three rather than only the headline figures.
+   */
+  const refreshAll = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      refreshToday();
+      refreshWeek();
+      await loadForDate(date);
+      setWeightRows(await getRecentWeightEntries(30));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refreshToday, refreshWeek, loadForDate, date]);
+
+  useRefreshOnForeground(() => void refreshAll());
+
   const weightTrend = useMemo(
     () =>
       calculateWeightTrend(
@@ -98,6 +123,16 @@ export default function TodayScreen() {
       ),
     [weightRows, date],
   );
+
+  /**
+   * Recomputed on each render rather than on a timer: the screen already
+   * re-renders on refresh and on foreground, which is exactly when this can
+   * have changed. A ticking clock would repaint the dashboard every minute for
+   * a line nobody is watching.
+   */
+  const recordedAt = metrics?.lastRecordedAt ?? null;
+  const freshness = describeFreshness(recordedAt, new Date());
+  const freshnessIsStale = isStale(recordedAt, new Date());
 
   const balance = calculateEnergyBalance({
     target: calorieTarget,
@@ -111,7 +146,7 @@ export default function TodayScreen() {
   const weightHistory = weightRows.slice(-7).map((row) => fromKg(row.kg, weightUnit));
 
   return (
-    <Screen>
+    <Screen onRefresh={() => void refreshAll()} isRefreshing={isRefreshing}>
       <View style={styles.header}>
         <View>
           <Caption>{formatLongDate(date)}</Caption>
@@ -126,6 +161,28 @@ export default function TodayScreen() {
           <Ionicons name="settings-outline" size={20} color={theme.colors.textMuted} />
         </Pressable>
       </View>
+
+      {/* Says how old the health figures are.
+          Data reaches this app through a chain it cannot see, and a total gives
+          no hint of its own age. Stated plainly, a long delay reads as
+          "force a sync" rather than "this app is broken". */}
+      {freshness ? (
+        <View style={styles.freshnessRow}>
+          <Ionicons
+            name={freshnessIsStale ? 'time-outline' : 'checkmark-circle-outline'}
+            size={13}
+            color={freshnessIsStale ? theme.metricColors.weight : theme.colors.textFaint}
+          />
+          <Caption
+            style={styles.freshnessText}
+            color={freshnessIsStale ? theme.metricColors.weight : theme.colors.textFaint}
+          >
+            {freshnessIsStale
+              ? `Health data last synced ${freshness} · pull to refresh`
+              : `Health data synced ${freshness}`}
+          </Caption>
+        </View>
+      ) : null}
 
       {isUsingMockHealthData() ? (
         <View style={styles.notice}>
@@ -313,6 +370,13 @@ const makeStyles = (t: Theme) =>
       justifyContent: 'space-between',
     },
     greeting: { marginTop: spacing.xs },
+    freshnessRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.md,
+    },
+    freshnessText: { textTransform: 'none', letterSpacing: 0, fontWeight: '500' },
     settingsButton: { padding: spacing.xs },
     notice: {
       marginTop: spacing.lg,

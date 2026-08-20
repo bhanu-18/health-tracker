@@ -124,12 +124,34 @@ export class HealthKitProvider implements HealthProvider {
     await this.ensureAuthorized();
 
     // Run independently so one failing metric cannot blank the whole dashboard.
-    const [steps, activeEnergyKcal, sleepHours] = await Promise.all([
+    const [steps, activeEnergyKcal, sleepHours, lastRecordedAt] = await Promise.all([
       this.readSteps(date),
       this.readActiveEnergy(date),
       this.readSleepHours(date),
+      this.readLastRecordedAt(date),
     ]);
-    return { date, steps, activeEnergyKcal, sleepHours };
+    return { date, steps, activeEnergyKcal, sleepHours, lastRecordedAt };
+  }
+
+  /**
+   * When the most recent step sample was written.
+   *
+   * Steps are the proxy for the whole day's freshness: they are the most
+   * continuously recorded metric, so if steps are current the sync is current.
+   * Asking for 'mostRecent' alongside the sum costs no extra query.
+   */
+  private async readLastRecordedAt(date: ISODate): Promise<Date | null> {
+    try {
+      const result = await queryStatisticsForQuantity(
+        'HKQuantityTypeIdentifierStepCount',
+        ['mostRecent'],
+        { filter: { date: dayBounds(date) }, unit: 'count' },
+      );
+      return result.mostRecentQuantityDateInterval?.to ?? null;
+    } catch (cause) {
+      warnReadFailed('lastRecordedAt', cause);
+      return null;
+    }
   }
 
   async readDailyMetricsRange(from: ISODate, to: ISODate): Promise<DailyHealthMetrics[]> {

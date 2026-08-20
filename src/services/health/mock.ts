@@ -37,6 +37,8 @@ function metricsFor(date: ISODate): DailyHealthMetrics {
     steps: Math.round(4_000 + seededUnit(date, 7) * 9_000),
     activeEnergyKcal: Math.round(180 + seededUnit(date, 13) * 520),
     sleepHours: Math.round((5.5 + seededUnit(date, 29) * 3.5) * 10) / 10,
+    // A plausible recent write, so the freshness indicator is exercised.
+    lastRecordedAt: new Date(`${date}T09:30:00`),
   };
 }
 
