@@ -4,8 +4,8 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
-    "@kingstinct/react-native-healthkit": "^14.0.2",
-    "babel-preset-expo": "~57.0.0",
+    "@kingstinct/react-native-healthkit": "^14.1.0",
+    "babel-preset-expo": "~57.0.9",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "expo": "~57.0.14",
@@ -26,7 +26,7 @@
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
     "react-native-web": "^0.21.2",
-    "zod": "^4.4.3",
+    "zod": "^4.5.4",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
